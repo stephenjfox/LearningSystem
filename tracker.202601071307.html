@@ -118,7 +118,6 @@
                                 <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Sp3</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Quiz</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Session Mi</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="history-list-body" class="divide-y divide-slate-100"></tbody>
@@ -161,30 +160,16 @@
 
 <div id="pass-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
-        <h3 id="pass-modal-title" class="text-2xl font-bold mb-6">Log Pass</h3>
-        <form onsubmit="handlePassSubmit(event)" class="space-y-4">
-            <input type="hidden" id="pass-edit-id">
-            <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Target Topic</label>
-                <select id="pass-topic-id" required class="w-full px-4 py-3 rounded-xl border border-slate-200"></select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Pass Date</label>
-                <input type="date" id="pass-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200">
-            </div>
+        <h3 class="text-2xl font-bold mb-6">Log Pass</h3>
+        <form onsubmit="addPass(event)" class="space-y-4">
+            <select id="pass-topic-id" required class="w-full px-4 py-3 rounded-xl border border-slate-200"></select>
             <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Sp3 (0-10)</label>
-                    <input type="number" step="0.1" min="0" max="10" id="pass-sp3" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="e.g. 7.5">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Quiz (0-10)</label>
-                    <input type="number" step="0.1" min="0" max="10" id="pass-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="e.g. 8.0">
-                </div>
+                <input type="number" step="0.1" min="0" max="10" id="pass-sp3" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Sp3 (0-10)">
+                <input type="number" step="0.1" min="0" max="10" id="pass-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Quiz (0-10)">
             </div>
-            <div class="flex gap-3 pt-2">
+            <div class="flex gap-3">
                 <button type="button" onclick="toggleModal('pass-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl">Cancel</button>
-                <button type="submit" id="pass-submit-btn" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold">Log Pass</button>
+                <button type="submit" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold">Log Pass</button>
             </div>
         </form>
     </div>
@@ -218,12 +203,8 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (event) => {
-            try {
-                state = JSON.parse(event.target.result);
-                save();
-            } catch (err) {
-                alert("Invalid JSON file.");
-            }
+            state = JSON.parse(event.target.result);
+            save();
         };
         reader.readAsText(file);
     }
@@ -238,18 +219,7 @@
     function toggleModal(id) {
         document.getElementById(id).classList.toggle('hidden');
         if (id === 'lecture-modal') populateTopicSelectors();
-        if (id === 'pass-modal') {
-            const editId = document.getElementById('pass-edit-id').value;
-            if (!editId) {
-                // Reset form for fresh entry
-                document.getElementById('pass-modal-title').innerText = "Log Pass";
-                document.getElementById('pass-submit-btn').innerText = "Log Pass";
-                document.getElementById('pass-date').value = new Date().toISOString().split('T')[0];
-                document.getElementById('pass-sp3').value = "";
-                document.getElementById('pass-quiz').value = "";
-            }
-            populatePassTopicDropdown();
-        }
+        if (id === 'pass-modal') populatePassTopicDropdown();
     }
 
     function switchView(viewId) {
@@ -285,52 +255,12 @@
         e.target.reset(); toggleModal('lecture-modal'); save();
     }
 
-    // Pass Submission Handler (Handles both Create and Update)
-    function handlePassSubmit(e) {
+    function addPass(e) {
         e.preventDefault();
-        const editId = document.getElementById('pass-edit-id').value;
-        const topicId = document.getElementById('pass-topic-id').value;
         const sp3 = parseFloat(document.getElementById('pass-sp3').value);
         const quiz = parseFloat(document.getElementById('pass-quiz').value);
-        const date = document.getElementById('pass-date').value;
-
-        if (editId) {
-            const index = state.passes.findIndex(p => p.id === editId);
-            if (index !== -1) {
-                state.passes[index] = { ...state.passes[index], topicId, sp3, quiz, date };
-            }
-        } else {
-            state.passes.push({ id: 'p'+Date.now(), topicId, sp3, quiz, date });
-        }
-
-        document.getElementById('pass-edit-id').value = ""; // Clear state
-        toggleModal('pass-modal');
-        save();
-    }
-
-    function openEditPass(id) {
-        const pass = state.passes.find(p => p.id === id);
-        if (!pass) return;
-
-        document.getElementById('pass-edit-id').value = pass.id;
-        document.getElementById('pass-modal-title').innerText = "Edit Pass Data";
-        document.getElementById('pass-submit-btn').innerText = "Update Pass";
-        
-        // Open modal first so dropdown is populated
-        toggleModal('pass-modal');
-        
-        // Fill form
-        document.getElementById('pass-topic-id').value = pass.topicId;
-        document.getElementById('pass-date').value = pass.date;
-        document.getElementById('pass-sp3').value = pass.sp3;
-        document.getElementById('pass-quiz').value = pass.quiz;
-    }
-
-    function deletePass(id) {
-        if(confirm("Permanently delete this individual pass record?")) {
-            state.passes = state.passes.filter(p => p.id !== id);
-            save();
-        }
+        state.passes.push({ id: 'p'+Date.now(), topicId: document.getElementById('pass-topic-id').value, sp3, quiz, date: new Date().toISOString().split('T')[0] });
+        e.target.reset(); toggleModal('pass-modal'); save();
     }
 
     function deleteTopic(id) {
@@ -357,7 +287,7 @@
     }
 
     function populatePassTopicDropdown() {
-        document.getElementById('pass-topic-id').innerHTML = state.topics.map(t => `<option value="${t.id}">${t.name}</option>`).join('') || '<option disabled>No topics available</option>';
+        document.getElementById('pass-topic-id').innerHTML = state.topics.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
     }
 
     function render() {
@@ -373,31 +303,20 @@
 
         document.getElementById('topic-list-body').innerHTML = sorted.map(t => {
             const stats = getTopicStats(t.id);
-            return `<tr><td class="px-6 py-4"><div><p class="font-bold text-slate-800">${t.name}</p><p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">${t.subject || 'General'}</p></div></td><td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${stats.mi}</span></td><td class="text-right px-6"><button onclick="deleteTopic('${t.id}')" class="text-slate-300 hover:text-red-500 transition-colors p-2">×</button></td></tr>`;
-        }).join('') || '<tr><td colspan="3" class="px-6 py-10 text-center text-slate-400 italic">No topics created yet.</td></tr>';
+            return `<tr><td class="px-6 py-4 font-bold">${t.name}</td><td class="text-center"><span class="px-2 py-1 rounded text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${stats.mi}</span></td><td class="text-right px-6"><button onclick="deleteTopic('${t.id}')" class="text-red-300 hover:text-red-500">×</button></td></tr>`;
+        }).join('');
 
         document.getElementById('lecture-grid').innerHTML = state.lectures.map(l => `
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group">
-                <button onclick="deleteLecture('${l.id}')" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
-                <p class="font-bold text-slate-800">${l.title}</p>
-                <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">${l.date}</p>
-                <div class="flex flex-wrap gap-1">${l.topics.map(tid => `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${state.topics.find(t=>t.id===tid)?.name || 'Deleted Topic'}</span>`).join('')}</div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative">
+                <button onclick="deleteLecture('${l.id}')" class="absolute top-2 right-2 text-slate-300 hover:text-red-500">×</button>
+                <p class="font-bold">${l.title}</p><p class="text-[10px] text-slate-400 mb-2">${l.date}</p>
+                <div class="flex flex-wrap gap-1">${l.topics.map(tid => `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${state.topics.find(t=>t.id===tid)?.name || '...'}</span>`).join('')}</div>
             </div>
-        `).join('') || '<p class="text-slate-400 text-center col-span-2 py-10 italic">No lectures logged yet.</p>';
+        `).join('') || '<p class="text-slate-400 text-center col-span-2">No lectures</p>';
 
-        document.getElementById('history-list-body').innerHTML = [...state.passes].sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => `
-            <tr class="group hover:bg-slate-50 transition-colors">
-                <td class="px-6 py-3 text-xs text-slate-500">${p.date}</td>
-                <td class="px-6 py-3 text-xs font-bold text-slate-800">${state.topics.find(t=>t.id===p.topicId)?.name || 'Unknown'}</td>
-                <td class="text-center text-xs text-slate-600 font-medium">${p.sp3}</td>
-                <td class="text-center text-xs text-slate-600 font-medium">${p.quiz}</td>
-                <td class="text-center text-xs font-bold">${((0.7*p.sp3)+(0.3*p.quiz)).toFixed(2)}</td>
-                <td class="text-right px-6 space-x-2">
-                    <button onclick="openEditPass('${p.id}')" class="text-slate-300 hover:text-indigo-600 transition-colors text-xs font-bold uppercase">Edit</button>
-                    <button onclick="deletePass('${p.id}')" class="text-slate-300 hover:text-red-500 transition-colors text-xs font-bold uppercase">Del</button>
-                </td>
-            </tr>
-        `).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No pass history recorded.</td></tr>';
+        document.getElementById('history-list-body').innerHTML = [...state.passes].reverse().map(p => `
+            <tr><td class="px-6 py-3 text-xs">${p.date}</td><td class="px-6 py-3 text-xs font-bold">${state.topics.find(t=>t.id===p.topicId)?.name}</td><td class="text-center text-xs">${p.sp3}</td><td class="text-center text-xs">${p.quiz}</td><td class="text-center text-xs font-bold">${((0.7*p.sp3)+(0.3*p.quiz)).toFixed(2)}</td></tr>
+        `).join('');
     }
 
     window.onload = init;
