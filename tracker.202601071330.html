@@ -10,8 +10,6 @@
         .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.1); }
-        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
-        input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
@@ -102,39 +100,7 @@
                     <h2 class="text-xl font-bold">Lecture Catalog</h2>
                     <button onclick="toggleModal('lecture-modal')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Add Lecture</button>
                 </div>
-                
-                <!-- Filter Bar -->
-                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex flex-wrap gap-4 items-end">
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Search & Sort</label>
-                        <select id="lecture-sort" onchange="render()" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500">
-                            <option value="date-desc">Date (Newest First)</option>
-                            <option value="date-asc">Date (Oldest First)</option>
-                            <option value="title-asc">Title (A-Z)</option>
-                            <option value="title-desc">Title (Z-A)</option>
-                        </select>
-                    </div>
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Filter by Topic</label>
-                        <select id="lecture-topic-filter" onchange="render()" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500">
-                            <option value="all">All Topics</option>
-                            <!-- Dynamic topics injected here -->
-                        </select>
-                    </div>
-                    <div class="flex gap-2">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Start Date</label>
-                            <input type="date" id="lecture-start-date" onchange="render()" class="px-3 py-2 text-sm rounded-lg border border-slate-200">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">End Date</label>
-                            <input type="date" id="lecture-end-date" onchange="render()" class="px-3 py-2 text-sm rounded-lg border border-slate-200">
-                        </div>
-                    </div>
-                    <button onclick="resetLectureFilters()" class="px-3 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider">Reset</button>
-                </div>
-
-                <div id="lecture-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="lecture-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </section>
 
             <!-- Pass History -->
@@ -149,9 +115,9 @@
                             <tr>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Date</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Topic</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Sp3/Quiz</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Mi</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Notes</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Sp3</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Quiz</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Session Mi</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Actions</th>
                             </tr>
                         </thead>
@@ -163,7 +129,7 @@
     </div>
 </div>
 
-<!-- Modals -->
+<!-- Modals (Topic, Lecture, Pass) -->
 <div id="topic-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
         <h3 class="text-2xl font-bold mb-6">New Master Topic</h3>
@@ -184,7 +150,6 @@
         <form onsubmit="addLecture(event)" class="space-y-4">
             <input type="text" id="lecture-title" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Lecture Title">
             <input type="date" id="lecture-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200">
-            <label class="block text-[10px] font-bold text-slate-400 uppercase px-1">Tag Relevant Topics</label>
             <div id="topic-selector-container" class="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 custom-scroll"></div>
             <div class="flex gap-3">
                 <button type="button" onclick="toggleModal('lecture-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl">Cancel</button>
@@ -217,10 +182,6 @@
                     <input type="number" step="0.1" min="0" max="10" id="pass-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="e.g. 8.0">
                 </div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Sprint Notes (Strategy, weak points, etc.)</label>
-                <textarea id="pass-note" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" placeholder="e.g. Teaching method used. Struggle with distal tubule pharmacology."></textarea>
-            </div>
             <div class="flex gap-3 pt-2">
                 <button type="button" onclick="toggleModal('pass-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl">Cancel</button>
                 <button type="submit" id="pass-submit-btn" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold">Log Pass</button>
@@ -234,13 +195,7 @@
 
     function init() {
         const saved = localStorage.getItem('med_mastery_v2');
-        if (saved) {
-            try {
-                state = JSON.parse(saved);
-            } catch (e) {
-                console.error("Storage corruption detected. Resetting.");
-            }
-        }
+        if (saved) state = JSON.parse(saved);
         render();
     }
 
@@ -286,12 +241,12 @@
         if (id === 'pass-modal') {
             const editId = document.getElementById('pass-edit-id').value;
             if (!editId) {
+                // Reset form for fresh entry
                 document.getElementById('pass-modal-title').innerText = "Log Pass";
                 document.getElementById('pass-submit-btn').innerText = "Log Pass";
                 document.getElementById('pass-date').value = new Date().toISOString().split('T')[0];
                 document.getElementById('pass-sp3').value = "";
                 document.getElementById('pass-quiz').value = "";
-                document.getElementById('pass-note').value = "";
             }
             populatePassTopicDropdown();
         }
@@ -330,6 +285,7 @@
         e.target.reset(); toggleModal('lecture-modal'); save();
     }
 
+    // Pass Submission Handler (Handles both Create and Update)
     function handlePassSubmit(e) {
         e.preventDefault();
         const editId = document.getElementById('pass-edit-id').value;
@@ -337,18 +293,17 @@
         const sp3 = parseFloat(document.getElementById('pass-sp3').value);
         const quiz = parseFloat(document.getElementById('pass-quiz').value);
         const date = document.getElementById('pass-date').value;
-        const note = document.getElementById('pass-note').value;
 
         if (editId) {
             const index = state.passes.findIndex(p => p.id === editId);
             if (index !== -1) {
-                state.passes[index] = { ...state.passes[index], topicId, sp3, quiz, date, note };
+                state.passes[index] = { ...state.passes[index], topicId, sp3, quiz, date };
             }
         } else {
-            state.passes.push({ id: 'p'+Date.now(), topicId, sp3, quiz, date, note });
+            state.passes.push({ id: 'p'+Date.now(), topicId, sp3, quiz, date });
         }
 
-        document.getElementById('pass-edit-id').value = "";
+        document.getElementById('pass-edit-id').value = ""; // Clear state
         toggleModal('pass-modal');
         save();
     }
@@ -361,13 +316,14 @@
         document.getElementById('pass-modal-title').innerText = "Edit Pass Data";
         document.getElementById('pass-submit-btn').innerText = "Update Pass";
         
+        // Open modal first so dropdown is populated
         toggleModal('pass-modal');
         
+        // Fill form
         document.getElementById('pass-topic-id').value = pass.topicId;
         document.getElementById('pass-date').value = pass.date;
         document.getElementById('pass-sp3').value = pass.sp3;
         document.getElementById('pass-quiz').value = pass.quiz;
-        document.getElementById('pass-note').value = pass.note || "";
     }
 
     function deletePass(id) {
@@ -404,87 +360,41 @@
         document.getElementById('pass-topic-id').innerHTML = state.topics.map(t => `<option value="${t.id}">${t.name}</option>`).join('') || '<option disabled>No topics available</option>';
     }
 
-    function resetLectureFilters() {
-        document.getElementById('lecture-sort').value = "date-desc";
-        document.getElementById('lecture-topic-filter').value = "all";
-        document.getElementById('lecture-start-date').value = "";
-        document.getElementById('lecture-end-date').value = "";
-        render();
-    }
-
     function render() {
-        // Stats
         document.getElementById('mh-value').innerText = calculateMh();
         document.getElementById('mastered-count').innerText = `${state.topics.filter(t => getTopicStats(t.id).mi >= 7).length} / ${state.topics.length}`;
 
-        // Priority Sidebar
-        const sortedTopics = [...state.topics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
+        const sorted = [...state.topics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
         const priority = document.getElementById('priority-topic');
-        if (sortedTopics.length > 0) {
-            const top = sortedTopics[0]; const stats = getTopicStats(top.id);
+        if (sorted.length > 0) {
+            const top = sorted[0]; const stats = getTopicStats(top.id);
             priority.innerHTML = `<div class="flex justify-between font-bold text-sm"><span>${top.name}</span><span>Mi: ${stats.mi}</span></div>`;
         } else { priority.innerHTML = `<p class="text-xs opacity-50">No data</p>`; }
 
-        // Dash Table
-        document.getElementById('topic-list-body').innerHTML = sortedTopics.map(t => {
+        document.getElementById('topic-list-body').innerHTML = sorted.map(t => {
             const stats = getTopicStats(t.id);
             return `<tr><td class="px-6 py-4"><div><p class="font-bold text-slate-800">${t.name}</p><p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">${t.subject || 'General'}</p></div></td><td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${stats.mi}</span></td><td class="text-right px-6"><button onclick="deleteTopic('${t.id}')" class="text-slate-300 hover:text-red-500 transition-colors p-2">×</button></td></tr>`;
         }).join('') || '<tr><td colspan="3" class="px-6 py-10 text-center text-slate-400 italic">No topics created yet.</td></tr>';
 
-        // Update Lecture Topic Filter Dropdown
-        const topicFilter = document.getElementById('lecture-topic-filter');
-        const currentFilterVal = topicFilter.value;
-        topicFilter.innerHTML = '<option value="all">All Topics</option>' + state.topics.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-        topicFilter.value = currentFilterVal;
-
-        // Lecture Grid Logic
-        const sortMode = document.getElementById('lecture-sort').value;
-        const topicFilterVal = document.getElementById('lecture-topic-filter').value;
-        const startDate = document.getElementById('lecture-start-date').value;
-        const endDate = document.getElementById('lecture-end-date').value;
-
-        let filteredLectures = [...state.lectures];
-
-        // Filter
-        if (topicFilterVal !== 'all') {
-            filteredLectures = filteredLectures.filter(l => l.topics.includes(topicFilterVal));
-        }
-        if (startDate) {
-            filteredLectures = filteredLectures.filter(l => l.date >= startDate);
-        }
-        if (endDate) {
-            filteredLectures = filteredLectures.filter(l => l.date <= endDate);
-        }
-
-        // Sort
-        filteredLectures.sort((a, b) => {
-            if (sortMode === 'date-desc') return new Date(b.date) - new Date(a.date);
-            if (sortMode === 'date-asc') return new Date(a.date) - new Date(b.date);
-            if (sortMode === 'title-asc') return a.title.localeCompare(b.title);
-            if (sortMode === 'title-desc') return b.title.localeCompare(a.title);
-            return 0;
-        });
-
-        document.getElementById('lecture-grid').innerHTML = filteredLectures.map(l => `
+        document.getElementById('lecture-grid').innerHTML = state.lectures.map(l => `
             <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group">
                 <button onclick="deleteLecture('${l.id}')" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
-                <p class="font-bold text-slate-800 leading-tight">${l.title}</p>
+                <p class="font-bold text-slate-800">${l.title}</p>
                 <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">${l.date}</p>
-                <div class="flex flex-wrap gap-1">${l.topics.map(tid => `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${state.topics.find(t=>t.id===tid)?.name || '...'}</span>`).join('')}</div>
+                <div class="flex flex-wrap gap-1">${l.topics.map(tid => `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${state.topics.find(t=>t.id===tid)?.name || 'Deleted Topic'}</span>`).join('')}</div>
             </div>
-        `).join('') || '<p class="text-slate-400 text-center col-span-full py-10 italic">No matching lectures found.</p>';
+        `).join('') || '<p class="text-slate-400 text-center col-span-2 py-10 italic">No lectures logged yet.</p>';
 
-        // History Table
         document.getElementById('history-list-body').innerHTML = [...state.passes].sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => `
             <tr class="group hover:bg-slate-50 transition-colors">
-                <td class="px-6 py-3 text-xs text-slate-500 whitespace-nowrap">${p.date}</td>
+                <td class="px-6 py-3 text-xs text-slate-500">${p.date}</td>
                 <td class="px-6 py-3 text-xs font-bold text-slate-800">${state.topics.find(t=>t.id===p.topicId)?.name || 'Unknown'}</td>
-                <td class="text-center text-xs text-slate-600 font-medium whitespace-nowrap">${p.sp3} / ${p.quiz}</td>
+                <td class="text-center text-xs text-slate-600 font-medium">${p.sp3}</td>
+                <td class="text-center text-xs text-slate-600 font-medium">${p.quiz}</td>
                 <td class="text-center text-xs font-bold">${((0.7*p.sp3)+(0.3*p.quiz)).toFixed(2)}</td>
-                <td class="px-6 py-3 text-[11px] text-slate-500 max-w-xs break-words italic">${p.note || '—'}</td>
-                <td class="text-right px-6 space-x-2 whitespace-nowrap">
-                    <button onclick="openEditPass('${p.id}')" class="text-slate-300 hover:text-indigo-600 transition-colors text-[10px] font-bold uppercase">Edit</button>
-                    <button onclick="deletePass('${p.id}')" class="text-slate-300 hover:text-red-500 transition-colors text-[10px] font-bold uppercase">Del</button>
+                <td class="text-right px-6 space-x-2">
+                    <button onclick="openEditPass('${p.id}')" class="text-slate-300 hover:text-indigo-600 transition-colors text-xs font-bold uppercase">Edit</button>
+                    <button onclick="deletePass('${p.id}')" class="text-slate-300 hover:text-red-500 transition-colors text-xs font-bold uppercase">Del</button>
                 </td>
             </tr>
         `).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No pass history recorded.</td></tr>';
