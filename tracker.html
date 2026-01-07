@@ -180,15 +180,16 @@
 
 <div id="lecture-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
-        <h3 class="text-2xl font-bold mb-6">Add Lecture</h3>
-        <form onsubmit="addLecture(event)" class="space-y-4">
+        <h3 id="lecture-modal-title" class="text-2xl font-bold mb-6">Add Lecture</h3>
+        <form onsubmit="handleLectureSubmit(event)" class="space-y-4">
+            <input type="hidden" id="lecture-edit-id">
             <input type="text" id="lecture-title" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Lecture Title">
             <input type="date" id="lecture-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200">
             <label class="block text-[10px] font-bold text-slate-400 uppercase px-1">Tag Relevant Topics</label>
             <div id="topic-selector-container" class="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 custom-scroll"></div>
             <div class="flex gap-3">
                 <button type="button" onclick="toggleModal('lecture-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl">Cancel</button>
-                <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
+                <button type="submit" id="lecture-submit-btn" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
             </div>
         </form>
     </div>
@@ -282,7 +283,16 @@
 
     function toggleModal(id) {
         document.getElementById(id).classList.toggle('hidden');
-        if (id === 'lecture-modal') populateTopicSelectors();
+        if (id === 'lecture-modal') {
+            const editId = document.getElementById('lecture-edit-id').value;
+            if (!editId) {
+                document.getElementById('lecture-modal-title').innerText = "Add Lecture";
+                document.getElementById('lecture-submit-btn').innerText = "Save Lecture";
+                document.getElementById('lecture-title').value = "";
+                document.getElementById('lecture-date').value = new Date().toISOString().split('T')[0];
+            }
+            populateTopicSelectors(); 
+        }
         if (id === 'pass-modal') {
             const editId = document.getElementById('pass-edit-id').value;
             if (!editId) {
@@ -323,11 +333,48 @@
         e.target.reset(); toggleModal('topic-modal'); save();
     }
 
-    function addLecture(e) {
+    // Unified Lecture Submission (Create & Update)
+    function handleLectureSubmit(e) {
         e.preventDefault();
-        const selected = Array.from(document.querySelectorAll('.topic-check:checked')).map(cb => cb.value);
-        state.lectures.push({ id: 'l'+Date.now(), title: document.getElementById('lecture-title').value, date: document.getElementById('lecture-date').value, topics: selected });
-        e.target.reset(); toggleModal('lecture-modal'); save();
+        const editId = document.getElementById('lecture-edit-id').value;
+        const title = document.getElementById('lecture-title').value;
+        const date = document.getElementById('lecture-date').value;
+        const selectedTopics = Array.from(document.querySelectorAll('.topic-check:checked')).map(cb => cb.value);
+
+        if (editId) {
+            const index = state.lectures.findIndex(l => l.id === editId);
+            if (index !== -1) {
+                state.lectures[index] = { ...state.lectures[index], title, date, topics: selectedTopics };
+            }
+        } else {
+            state.lectures.push({ id: 'l'+Date.now(), title, date, topics: selectedTopics });
+        }
+
+        document.getElementById('lecture-edit-id').value = "";
+        toggleModal('lecture-modal');
+        save();
+    }
+
+    function openEditLecture(id) {
+        const lecture = state.lectures.find(l => l.id === id);
+        if (!lecture) return;
+
+        document.getElementById('lecture-edit-id').value = lecture.id;
+        document.getElementById('lecture-modal-title').innerText = "Edit Lecture";
+        document.getElementById('lecture-submit-btn').innerText = "Update Lecture";
+        
+        // Open modal first to run checkbox population
+        toggleModal('lecture-modal');
+        
+        document.getElementById('lecture-title').value = lecture.title;
+        document.getElementById('lecture-date').value = lecture.date;
+        
+        // Pre-check the checkboxes
+        setTimeout(() => {
+            document.querySelectorAll('.topic-check').forEach(cb => {
+                cb.checked = lecture.topics.includes(cb.value);
+            });
+        }, 10);
     }
 
     function handlePassSubmit(e) {
@@ -395,7 +442,7 @@
     function populateTopicSelectors() {
         document.getElementById('topic-selector-container').innerHTML = state.topics.map(t => `
             <label class="flex items-center gap-2 p-1 hover:bg-slate-50 cursor-pointer text-sm">
-                <input type="checkbox" value="${t.id}" class="topic-check"> ${t.name}
+                <input type="checkbox" value="${t.id}" class="topic-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"> ${t.name}
             </label>
         `).join('') || '<p class="text-xs text-slate-400">Add topics first</p>';
     }
@@ -467,8 +514,11 @@
 
         document.getElementById('lecture-grid').innerHTML = filteredLectures.map(l => `
             <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative group">
-                <button onclick="deleteLecture('${l.id}')" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
-                <p class="font-bold text-slate-800 leading-tight">${l.title}</p>
+                <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="openEditLecture('${l.id}')" class="text-slate-300 hover:text-indigo-600 text-xs font-black p-1">EDIT</button>
+                    <button onclick="deleteLecture('${l.id}')" class="text-slate-300 hover:text-red-500 text-lg leading-none">×</button>
+                </div>
+                <p class="font-bold text-slate-800 leading-tight pr-12">${l.title}</p>
                 <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">${l.date}</p>
                 <div class="flex flex-wrap gap-1">${l.topics.map(tid => `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${state.topics.find(t=>t.id===tid)?.name || '...'}</span>`).join('')}</div>
             </div>
