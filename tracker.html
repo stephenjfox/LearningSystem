@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastery Optimization Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
+
+<div id="app" class="max-w-7xl mx-auto px-4 py-8 lg:px-8">
+    <!-- Header & Global Stats -->
+    <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Mastery Optimization Dashboard</h1>
+            <p class="text-slate-500 mt-1">Brown Alpert Medical School Learning System</p>
+        </div>
+        <div class="flex gap-4">
+            <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Harmonic Mean (Mh)</p>
+                <p id="mh-value" class="text-3xl font-bold text-indigo-600">0.0</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Topics Mastered</p>
+                <p id="mastered-count" class="text-3xl font-bold text-emerald-500">0 / 0</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Toolbar: Persistence Layer -->
+    <div class="mb-6 flex flex-wrap gap-3">
+        <button onclick="exportData()" class="bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Export Backup (.json)
+        </button>
+        <label class="bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2 cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Restore Backup
+            <input type="file" id="import-input" class="hidden" accept=".json" onchange="importData(event)">
+        </label>
+        <button onclick="clearAllData()" class="bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-100">
+            Clear All Data
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Sidebar -->
+        <aside class="lg:col-span-3 space-y-6">
+            <nav class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full text-left px-6 py-4 font-medium flex items-center gap-3 bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600">
+                    Topic Mastery
+                </button>
+                <button onclick="switchView('lectures')" id="nav-lectures" class="nav-btn w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600">
+                    Lectures
+                </button>
+                <button onclick="switchView('history')" id="nav-history" class="nav-btn w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600">
+                    Pass History
+                </button>
+            </nav>
+
+            <div class="bg-indigo-600 rounded-2xl p-6 text-white card-shadow">
+                <h3 class="font-bold text-lg mb-2">Next Priority</h3>
+                <div id="priority-topic" class="bg-white/10 rounded-xl p-3 border border-white/20">
+                    <span class="text-xs uppercase font-bold opacity-70">Add topics to begin</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="lg:col-span-9">
+            <!-- Dashboard -->
+            <section id="view-dashboard" class="view space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-800">Topic Master List</h2>
+                    <button onclick="toggleModal('topic-modal')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Add Topic</button>
+                </div>
+                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100">
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Topic</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Mi</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topic-list-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Lectures -->
+            <section id="view-lectures" class="view hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">Lecture Catalog</h2>
+                    <button onclick="toggleModal('lecture-modal')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Add Lecture</button>
+                </div>
+                <div id="lecture-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </section>
+
+            <!-- Pass History -->
+            <section id="view-history" class="view hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">Pass History</h2>
+                    <button onclick="toggleModal('pass-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Log New Pass</button>
+                </div>
+                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Date</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Topic</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Sp3</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Quiz</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Session Mi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-list-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<!-- Modals (Topic, Lecture, Pass) -->
+<div id="topic-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+        <h3 class="text-2xl font-bold mb-6">New Master Topic</h3>
+        <form onsubmit="addTopic(event)" class="space-y-4">
+            <input type="text" id="topic-name" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Topic Name">
+            <input type="text" id="topic-subject" class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Subject (e.g. Renal)">
+            <div class="flex gap-3">
+                <button type="button" onclick="toggleModal('topic-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl">Cancel</button>
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="lecture-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+        <h3 class="text-2xl font-bold mb-6">Add Lecture</h3>
+        <form onsubmit="addLecture(event)" class="space-y-4">
+            <input type="text" id="lecture-title" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Lecture Title">
+            <input type="date" id="lecture-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200">
+            <div id="topic-selector-container" class="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 custom-scroll"></div>
+            <div class="flex gap-3">
+                <button type="button" onclick="toggleModal('lecture-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl">Cancel</button>
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="pass-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+        <h3 class="text-2xl font-bold mb-6">Log Pass</h3>
+        <form onsubmit="addPass(event)" class="space-y-4">
+            <select id="pass-topic-id" required class="w-full px-4 py-3 rounded-xl border border-slate-200"></select>
+            <div class="grid grid-cols-2 gap-4">
+                <input type="number" step="0.1" min="0" max="10" id="pass-sp3" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Sp3 (0-10)">
+                <input type="number" step="0.1" min="0" max="10" id="pass-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Quiz (0-10)">
+            </div>
+            <div class="flex gap-3">
+                <button type="button" onclick="toggleModal('pass-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl">Cancel</button>
+                <button type="submit" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold">Log Pass</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let state = { topics: [], lectures: [], passes: [] };
+
+    function init() {
+        const saved = localStorage.getItem('med_mastery_v2');
+        if (saved) state = JSON.parse(saved);
+        render();
+    }
+
+    function save() {
+        localStorage.setItem('med_mastery_v2', JSON.stringify(state));
+        render();
+    }
+
+    function exportData() {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Mastery_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    }
+
+    function importData(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            state = JSON.parse(event.target.result);
+            save();
+        };
+        reader.readAsText(file);
+    }
+
+    function clearAllData() {
+        if(confirm("DANGER: This will permanently delete all your topics and mastery scores. Proceed?")) {
+            state = { topics: [], lectures: [], passes: [] };
+            save();
+        }
+    }
+
+    function toggleModal(id) {
+        document.getElementById(id).classList.toggle('hidden');
+        if (id === 'lecture-modal') populateTopicSelectors();
+        if (id === 'pass-modal') populatePassTopicDropdown();
+    }
+
+    function switchView(viewId) {
+        document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+        document.getElementById('view-' + viewId).classList.remove('hidden');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-l-4', 'border-indigo-600'));
+        document.getElementById('nav-' + viewId).classList.add('bg-indigo-50', 'text-indigo-700', 'border-l-4', 'border-indigo-600');
+    }
+
+    function getTopicStats(topicId) {
+        const topicPasses = state.passes.filter(p => p.topicId === topicId);
+        if (topicPasses.length === 0) return { mi: 0, count: 0 };
+        const avgSp3 = topicPasses.reduce((acc, p) => acc + p.sp3, 0) / topicPasses.length;
+        const avgQuiz = topicPasses.reduce((acc, p) => acc + p.quiz, 0) / topicPasses.length;
+        return { mi: ((0.7 * avgSp3) + (0.3 * avgQuiz)).toFixed(2), count: topicPasses.length };
+    }
+
+    function calculateMh() {
+        const mis = state.topics.map(t => parseFloat(getTopicStats(t.id).mi)).filter(mi => mi > 0);
+        return mis.length === 0 ? 0 : (mis.length / mis.reduce((acc, mi) => acc + (1/mi), 0)).toFixed(2);
+    }
+
+    function addTopic(e) {
+        e.preventDefault();
+        state.topics.push({ id: 't'+Date.now(), name: document.getElementById('topic-name').value, subject: document.getElementById('topic-subject').value });
+        e.target.reset(); toggleModal('topic-modal'); save();
+    }
+
+    function addLecture(e) {
+        e.preventDefault();
+        const selected = Array.from(document.querySelectorAll('.topic-check:checked')).map(cb => cb.value);
+        state.lectures.push({ id: 'l'+Date.now(), title: document.getElementById('lecture-title').value, date: document.getElementById('lecture-date').value, topics: selected });
+        e.target.reset(); toggleModal('lecture-modal'); save();
+    }
+
+    function addPass(e) {
+        e.preventDefault();
+        const sp3 = parseFloat(document.getElementById('pass-sp3').value);
+        const quiz = parseFloat(document.getElementById('pass-quiz').value);
+        state.passes.push({ id: 'p'+Date.now(), topicId: document.getElementById('pass-topic-id').value, sp3, quiz, date: new Date().toISOString().split('T')[0] });
+        e.target.reset(); toggleModal('pass-modal'); save();
+    }
+
+    function deleteTopic(id) {
+        if(confirm("Delete topic and its history?")) {
+            state.topics = state.topics.filter(t => t.id !== id);
+            state.passes = state.passes.filter(p => p.topicId !== id);
+            save();
+        }
+    }
+
+    function deleteLecture(id) {
+        if(confirm("Delete lecture?")) {
+            state.lectures = state.lectures.filter(l => l.id !== id);
+            save();
+        }
+    }
+
+    function populateTopicSelectors() {
+        document.getElementById('topic-selector-container').innerHTML = state.topics.map(t => `
+            <label class="flex items-center gap-2 p-1 hover:bg-slate-50 cursor-pointer text-sm">
+                <input type="checkbox" value="${t.id}" class="topic-check"> ${t.name}
+            </label>
+        `).join('') || '<p class="text-xs text-slate-400">Add topics first</p>';
+    }
+
+    function populatePassTopicDropdown() {
+        document.getElementById('pass-topic-id').innerHTML = state.topics.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    }
+
+    function render() {
+        document.getElementById('mh-value').innerText = calculateMh();
+        document.getElementById('mastered-count').innerText = `${state.topics.filter(t => getTopicStats(t.id).mi >= 7).length} / ${state.topics.length}`;
+
+        const sorted = [...state.topics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
+        const priority = document.getElementById('priority-topic');
+        if (sorted.length > 0) {
+            const top = sorted[0]; const stats = getTopicStats(top.id);
+            priority.innerHTML = `<div class="flex justify-between font-bold text-sm"><span>${top.name}</span><span>Mi: ${stats.mi}</span></div>`;
+        } else { priority.innerHTML = `<p class="text-xs opacity-50">No data</p>`; }
+
+        document.getElementById('topic-list-body').innerHTML = sorted.map(t => {
+            const stats = getTopicStats(t.id);
+            return `<tr><td class="px-6 py-4 font-bold">${t.name}</td><td class="text-center"><span class="px-2 py-1 rounded text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${stats.mi}</span></td><td class="text-right px-6"><button onclick="deleteTopic('${t.id}')" class="text-red-300 hover:text-red-500">×</button></td></tr>`;
+        }).join('');
+
+        document.getElementById('lecture-grid').innerHTML = state.lectures.map(l => `
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative">
+                <button onclick="deleteLecture('${l.id}')" class="absolute top-2 right-2 text-slate-300 hover:text-red-500">×</button>
+                <p class="font-bold">${l.title}</p><p class="text-[10px] text-slate-400 mb-2">${l.date}</p>
+                <div class="flex flex-wrap gap-1">${l.topics.map(tid => `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${state.topics.find(t=>t.id===tid)?.name || '...'}</span>`).join('')}</div>
+            </div>
+        `).join('') || '<p class="text-slate-400 text-center col-span-2">No lectures</p>';
+
+        document.getElementById('history-list-body').innerHTML = [...state.passes].reverse().map(p => `
+            <tr><td class="px-6 py-3 text-xs">${p.date}</td><td class="px-6 py-3 text-xs font-bold">${state.topics.find(t=>t.id===p.topicId)?.name}</td><td class="text-center text-xs">${p.sp3}</td><td class="text-center text-xs">${p.quiz}</td><td class="text-center text-xs font-bold">${((0.7*p.sp3)+(0.3*p.quiz)).toFixed(2)}</td></tr>
+        `).join('');
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
