@@ -682,6 +682,13 @@
     }
 
     // --- UI Helpers ---
+    function toggleIngested(lectureId) {
+        const lecture = state.lectures.find(l => l.id === lectureId);
+        if (lecture) {
+            lecture.ingested = !lecture.ingested;
+            save();
+        }
+    }
 
     function toggleModal(id) {
         const el = document.getElementById(id);
