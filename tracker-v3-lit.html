@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastery Tracker v3 (Lit)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar to match v2 */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.1); }
+        .ingested-row { opacity: 0.5; filter: grayscale(1); }
+        .ingested-text { text-decoration: line-through; color: #94a3b8; }
+        [hidden] { display: none !important; }
+    </style>
+    <!-- Import Lit -->
+    <script type="module">
+        import { html, render, LitElement } from 'https://esm.sh/lit@3.1.0';
+        import { map } from 'https://esm.sh/lit@3.1.0/directives/map.js';
+        import { when } from 'https://esm.sh/lit@3.1.0/directives/when.js';
+
+        // --- Data / Store Logic ---
+        class Store extends EventTarget {
+            constructor() {
+                super();
+                this.state = { blocks: [], activeBlockId: null, topics: [], lectures: [], passes: [] };
+                this.init();
+            }
+
+            init() {
+                const saved = localStorage.getItem('med_mastery_v2');
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        if (!parsed.blocks || parsed.blocks.length === 0) {
+                            // Migration logic if needed (simplified for v3)
+                            this.resetState();
+                        } else {
+                            this.state = parsed;
+                        }
+                    } catch (e) {
+                        console.error("Storage corruption", e);
+                        this.resetState();
+                    }
+                } else {
+                    this.resetState();
+                }
+            }
+
+            resetState() {
+                const defaultBlockId = 'b-' + Date.now();
+                this.state = {
+                    blocks: [{ id: defaultBlockId, name: "Block 1", masteryGoal: 0 }],
+                    activeBlockId: defaultBlockId,
+                    topics: [],
+                    lectures: [],
+                    passes: []
+                };
+                this.save();
+            }
+
+            save() {
+                localStorage.setItem('med_mastery_v2', JSON.stringify(this.state));
+                this.dispatchEvent(new Event('state-changed'));
+            }
+
+            get() { return this.state; }
+
+            // Actions
+            setActiveBlock(id) {
+                this.state.activeBlockId = id;
+                this.save();
+            }
+
+            addBlock(name) {
+                const newId = 'b-' + Date.now();
+                this.state.blocks.push({ id: newId, name, masteryGoal: 0 });
+                this.state.activeBlockId = newId;
+                this.save();
+            }
+
+            renameBlock(id, newName) {
+                const block = this.state.blocks.find(b => b.id === id);
+                if (block) {
+                    block.name = newName;
+                    this.save();
+                }
+            }
+
+            setGoal(mh) {
+                const block = this.state.blocks.find(b => b.id === this.state.activeBlockId);
+                if (block) {
+                    block.masteryGoal = parseFloat(mh);
+                    this.save();
+                }
+            }
+
+            addTopic(topic) {
+                this.state.topics.push({ ...topic, id: topic.id || 't'+Date.now(), blockId: this.state.activeBlockId });
+                this.save();
+            }
+
+            updateTopic(id, updates) {
+                const idx = this.state.topics.findIndex(t => t.id === id);
+                if (idx > -1) {
+                    this.state.topics[idx] = { ...this.state.topics[idx], ...updates };
+                    this.save();
+                }
+            }
+
+            deleteTopic(id) {
+                this.state.topics = this.state.topics.filter(t => t.id !== id);
+                this.state.passes = this.state.passes.filter(p => p.topicId !== id);
+                this.save();
+            }
+
+            addLecture(lecture) {
+                this.state.lectures.push({ ...lecture, id: lecture.id || 'l'+Date.now(), blockId: this.state.activeBlockId, ingested: false });
+                this.save();
+            }
+
+            updateLecture(id, updates) {
+                const idx = this.state.lectures.findIndex(l => l.id === id);
+                if (idx > -1) {
+                    this.state.lectures[idx] = { ...this.state.lectures[idx], ...updates };
+                    this.save();
+                }
+            }
+
+            deleteLecture(id) {
+                this.state.lectures = this.state.lectures.filter(l => l.id !== id);
+                this.save();
+            }
+
+            addPass(pass) {
+                this.state.passes.push({ ...pass, id: pass.id || 'p'+Date.now() });
+                this.save();
+            }
+
+            updatePass(id, updates) {
+                const idx = this.state.passes.findIndex(p => p.id === id);
+                if (idx > -1) {
+                    this.state.passes[idx] = { ...this.state.passes[idx], ...updates };
+                    this.save();
+                }
+            }
+
+            deletePass(id) {
+                this.state.passes = this.state.passes.filter(p => p.id !== id);
+                this.save();
+            }
+        }
+
+        const store = new Store();
+
+        // --- Helpers ---
+        function getTopicStats(topicId, passes) {
+            const topicPasses = passes.filter(p => p.topicId === topicId);
+            if (topicPasses.length === 0) return { mi: 0, count: 0 };
+            const avgSp3 = topicPasses.reduce((acc, p) => acc + p.sp3, 0) / topicPasses.length;
+            const avgQuiz = topicPasses.reduce((acc, p) => acc + p.quiz, 0) / topicPasses.length;
+            return { mi: ((0.7 * avgSp3) + (0.3 * avgQuiz)).toFixed(2), count: topicPasses.length };
+        }
+
+        function calculateMh(topics, passes) {
+            const mis = topics.map(t => parseFloat(getTopicStats(t.id, passes).mi)).filter(mi => mi > 0);
+            return mis.length === 0 ? 0 : (mis.length / mis.reduce((acc, mi) => acc + (1/mi), 0)).toFixed(2);
+        }
+
+        // --- Components ---
+
+        class BaseComponent extends LitElement {
+            createRenderRoot() { return this; } // Light DOM for Tailwind
+            
+            constructor() {
+                super();
+                this.state = store.get();
+                this._listener = () => {
+                    this.state = store.get();
+                    this.requestUpdate();
+                };
+            }
+
+            connectedCallback() {
+                super.connectedCallback();
+                store.addEventListener('state-changed', this._listener);
+            }
+
+            disconnectedCallback() {
+                store.removeEventListener('state-changed', this._listener);
+                super.disconnectedCallback();
+            }
+        }
+
+        class MasteryApp extends BaseComponent {
+            static properties = {
+                currentView: { type: String }
+            };
+
+            constructor() {
+                super();
+                this.currentView = 'dashboard';
+                this.showTopicModal = false;
+                this.showLectureModal = false;
+                this.showPassModal = false;
+                this.showGoalModal = false;
+                this.showBlockModal = false;
+                this.editTargetId = null; // ID of item being edited
+            }
+
+            render() {
+                const { blocks, activeBlockId, topics, lectures, passes } = this.state;
+                const isAllBlocks = activeBlockId === 'all';
+                const activeBlock = isAllBlocks ? null : blocks.find(b => b.id === activeBlockId);
+                
+                const filteredTopics = isAllBlocks ? topics : topics.filter(t => t.blockId === activeBlockId);
+                const filteredLectures = isAllBlocks ? lectures : lectures.filter(l => l.blockId === activeBlockId);
+
+                // Stats
+                const mh = calculateMh(filteredTopics, passes);
+                const ingestedCount = filteredLectures.filter(l => l.ingested).length;
+                const masteredCount = filteredTopics.filter(t => parseFloat(getTopicStats(t.id, passes).mi) >= 7).length;
+
+                return html`
+                    <div class="max-w-7xl mx-auto px-4 py-8 lg:px-8">
+                        <!-- Header -->
+                        <header class="mb-10">
+                            <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+                                <div>
+                                    <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Mastery Optimization Dashboard (Lit)</h1>
+                                    <p class="text-slate-500 mt-1">Brown University's Warren Alpert Medical School Learning System</p>
+                                    <div class="mt-6 flex items-center gap-3">
+                                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Block:</label>
+                                        <div class="flex items-center gap-2">
+                                            <select class="bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 min-w-[200px] shadow-sm"
+                                                @change="${this.handleBlockChange}">
+                                                <option value="all" ?selected="${activeBlockId === 'all'}">All Blocks (Longitudinal)</option>
+                                                ${blocks.map(b => html`<option value="${b.id}" ?selected="${b.id === activeBlockId}">${b.name}</option>`)}
+                                                <option value="new_block_action" class="font-bold text-indigo-600">+ New Block...</option>
+                                            </select>
+                                            ${!isAllBlocks ? html`
+                                                <button @click="${this.renameBlock}" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-4">
+                                    <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[160px] relative group">
+                                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Harmonic Mean (Mh)</p>
+                                        <div class="flex items-baseline gap-2">
+                                            <p class="text-3xl font-bold text-indigo-600">${mh}</p>
+                                            <p class="text-xs font-bold text-slate-300">/ ${!isAllBlocks && activeBlock ? activeBlock.masteryGoal : '(Global)'}</p>
+                                        </div>
+                                        ${!isAllBlocks ? html`
+                                            <button @click="${() => { this.showGoalModal = true; this.requestUpdate(); }}" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-indigo-400 hover:text-indigo-600 uppercase">Set Goal</button>
+                                        ` : ''}
+                                    </div>
+                                    <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
+                                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lecture Coverage</p>
+                                        <p class="text-3xl font-bold text-blue-500">${ingestedCount} / ${filteredLectures.length}</p>
+                                    </div>
+                                    <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
+                                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Topics Mastered</p>
+                                        <p class="text-3xl font-bold text-emerald-500">${masteredCount} / ${filteredTopics.length}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Goal Bar -->
+                            ${!isAllBlocks && activeBlock.masteryGoal > 0 ? html`
+                                <div class="bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Block Mastery Progress</p>
+                                        <p class="text-xs font-black text-indigo-600">${Math.min(100, Math.round((mh / activeBlock.masteryGoal) * 100))}%</p>
+                                    </div>
+                                    <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                                        <div class="bg-indigo-600 h-full transition-all duration-1000" style="width: ${Math.min(100, Math.round((mh / activeBlock.masteryGoal) * 100))}%"></div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </header>
+
+                        <!-- Toolbar -->
+                        <div class="mb-6 flex flex-wrap gap-3">
+                            <button @click="${this.exportData}" class="bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2">Export Backup</button>
+                            <label class="bg-white border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2 cursor-pointer">
+                                Restore Backup
+                                <input type="file" class="hidden" accept=".json" @change="${this.importData}">
+                            </label>
+                            <button @click="${() => { if(confirm('Reset all data?')) { store.resetState(); }}}" class="bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-100">Clear All Data</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            <!-- Sidebar -->
+                            <aside class="lg:col-span-3 space-y-6">
+                                <nav class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                                    ${this.renderNavLink('dashboard', 'Topic Mastery')}
+                                    ${this.renderNavLink('checklist', 'Lecture Checklist')}
+                                    ${this.renderNavLink('lectures', 'Lecture Catalog')}
+                                    ${this.renderNavLink('history', 'Pass History')}
+                                </nav>
+                            </aside>
+
+                            <!-- Main View -->
+                            <main class="lg:col-span-9">
+                                ${this.renderCurrentView()}
+                            </main>
+                        </div>
+                    </div>
+
+                    <!-- Modals -->
+                    ${this.renderModals()}
+                `;
+            }
+
+            renderNavLink(view, label) {
+                const isActive = this.currentView === view;
+                return html`
+                    <button @click="${() => this.currentView = view}" 
+                        class="w-full text-left px-6 py-4 font-medium flex items-center gap-3 transition-all ${isActive ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600' : 'hover:bg-slate-50 text-slate-600'}">
+                        ${label}
+                    </button>
+                `;
+            }
+
+            renderCurrentView() {
+                switch(this.currentView) {
+                    case 'dashboard': return html`<view-dashboard .app="${this}"></view-dashboard>`;
+                    case 'checklist': return html`<view-checklist .app="${this}"></view-checklist>`;
+                    case 'lectures': return html`<view-lectures .app="${this}"></view-lectures>`;
+                    case 'history': return html`<view-history .app="${this}"></view-history>`;
+                    default: return html`<div>View not found</div>`;
+                }
+            }
+
+            handleBlockChange(e) {
+                const val = e.target.value;
+                if (val === 'new_block_action') {
+                    this.showBlockModal = true;
+                    e.target.value = this.state.activeBlockId; // revert selection until created
+                    this.requestUpdate();
+                } else {
+                    store.setActiveBlock(val);
+                }
+            }
+
+            renameBlock() {
+                const block = this.state.blocks.find(b => b.id === this.state.activeBlockId);
+                if (!block) return;
+                const newName = prompt("Rename Block:", block.name);
+                if (newName && newName.trim() !== "") store.renameBlock(block.id, newName.trim());
+            }
+
+            exportData() {
+                const blob = new Blob([JSON.stringify(store.get(), null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Mastery_Backup_${new Date().toISOString()}.json`;
+                a.click();
+            }
+
+            importData(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        if (!parsed.blocks && !parsed.topics) throw new Error("Invalid");
+                        // Barebones migration/validation
+                        store.state = parsed; 
+                        store.save();
+                    } catch(err) { alert("Invalid file"); }
+                };
+                reader.readAsText(file);
+            }
+
+            // Helpers for child components to open modals
+            openAddTopic() { this.editTargetId = null; this.showTopicModal = true; this.requestUpdate(); }
+            openEditTopic(id) { this.editTargetId = id; this.showTopicModal = true; this.requestUpdate(); }
+            
+            openAddLecture() { this.editTargetId = null; this.showLectureModal = true; this.requestUpdate(); }
+            openEditLecture(id) { this.editTargetId = id; this.showLectureModal = true; this.requestUpdate(); }
+            
+            openLogPass() { this.editTargetId = null; this.showPassModal = true; this.requestUpdate(); }
+            openEditPass(id) { this.editTargetId = id; this.showPassModal = true; this.requestUpdate(); }
+
+            renderModals() {
+                return html`
+                    ${this.showBlockModal ? html`
+                        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl">
+                                <h3 class="text-2xl font-bold mb-4 text-slate-800">New Block</h3>
+                                <form @submit="${this.handleBlockSubmit}">
+                                    <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-4" placeholder="Block Name">
+                                    <div class="flex gap-3">
+                                        <button type="button" @click="${() => {this.showBlockModal = false; this.requestUpdate();}}" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                                        <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Create</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    `:''}
+
+                    ${this.showGoalModal ? html`
+                        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl">
+                                <h3 class="text-2xl font-bold mb-4 text-slate-800">Set Goal</h3>
+                                <form @submit="${this.handleGoalSubmit}">
+                                    <input type="number" step="0.1" max="10" name="mh" required class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-4" 
+                                        .value="${store.state.blocks.find(b => b.id === store.state.activeBlockId)?.masteryGoal || ''}" placeholder="Target Mh">
+                                    <div class="flex gap-3">
+                                        <button type="button" @click="${() => {this.showGoalModal = false; this.requestUpdate();}}" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                                        <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    `:''}
+
+                    ${this.showTopicModal ? html`<modal-topic .editId="${this.editTargetId}" @close="${() => {this.showTopicModal = false; this.requestUpdate();}}"></modal-topic>` : ''}
+                    ${this.showLectureModal ? html`<modal-lecture .editId="${this.editTargetId}" @close="${() => {this.showLectureModal = false; this.requestUpdate();}}"></modal-lecture>` : ''}
+                    ${this.showPassModal ? html`<modal-pass .editId="${this.editTargetId}" @close="${() => {this.showPassModal = false; this.requestUpdate();}}"></modal-pass>` : ''}
+                `;
+            }
+
+            handleBlockSubmit(e) {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                store.addBlock(fd.get('name'));
+                this.showBlockModal = false;
+                this.requestUpdate();
+            }
+
+            handleGoalSubmit(e) {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                store.setGoal(fd.get('mh'));
+                this.showGoalModal = false;
+                this.requestUpdate();
+            }
+        }
+        customElements.define('mastery-app', MasteryApp);
+
+        // --- View Components ---
+
+        class ViewDashboard extends BaseComponent {
+            render() {
+                const { topics, blocks, activeBlockId, passes } = this.state;
+                const isAllBlocks = activeBlockId === 'all';
+                const activeTopics = isAllBlocks ? topics : topics.filter(t => t.blockId === activeBlockId);
+
+                return html`
+                    <section class="space-y-6">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-bold text-slate-800">Topic Master List</h2>
+                            ${!isAllBlocks ? html`<button @click="${() => this.app.openAddTopic()}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold">Add Topic</button>` : ''}
+                        </div>
+                        <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-100">
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Topic</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Mi</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${activeTopics.length === 0 ? html`<tr><td colspan="3" class="px-6 py-8 text-center text-slate-400">No topics.</td></tr>` : ''}
+                                    ${map(activeTopics.sort((a,b) => getTopicStats(a.id, passes).mi - getTopicStats(b.id, passes).mi), t => {
+                                        const stats = getTopicStats(t.id, passes);
+                                        return html`
+                                            <tr>
+                                                <td class="px-6 py-4 font-bold text-slate-800">
+                                                    ${t.name}
+                                                    ${t.tags ? t.tags.map(tag => html`<span class="ml-2 text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-mono">${tag}</span>`) : ''}
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}">${stats.mi}</span>
+                                                </td>
+                                                <td class="text-right px-6 space-x-2">
+                                                    <button @click="${() => this.app.openEditTopic(t.id)}" class="text-indigo-300 hover:text-indigo-600 text-[10px] font-bold uppercase">Edit</button>
+                                                    <button @click="${() => {if(confirm('Delete?')) store.deleteTopic(t.id)}}" class="text-slate-300 hover:text-red-500 text-lg">×</button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                `;
+            }
+        }
+        customElements.define('view-dashboard', ViewDashboard);
+
+        class ViewChecklist extends BaseComponent {
+            render() {
+                const { lectures, activeBlockId, topics } = this.state;
+                const isAllBlocks = activeBlockId === 'all';
+                const activeLectures = isAllBlocks ? lectures : lectures.filter(l => l.blockId === activeBlockId);
+
+                return html`
+                    <section class="space-y-6">
+                        <h2 class="text-xl font-bold text-slate-800">Ingestion Checklist</h2>
+                        <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-6 py-4 w-12 text-center">Status</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Lecture</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Topics</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${activeLectures.sort((a,b) => new Date(b.date) - new Date(a.date)).map(l => html`
+                                        <tr class="${l.ingested ? 'ingested-row' : ''}">
+                                            <td class="px-6 py-4 text-center">
+                                                <input type="checkbox" ?checked="${l.ingested}" 
+                                                    @change="${(e) => store.updateLecture(l.id, { ingested: e.target.checked })}"
+                                                    class="w-5 h-5 cursor-pointer text-blue-600 rounded">
+                                            </td>
+                                            <td class="px-6 py-4 font-bold text-slate-800 ${l.ingested ? 'ingested-text' : ''}">${l.title}</td>
+                                            <td class="px-6 py-4">
+                                                ${l.topics.map(tid => {
+                                                    const t = topics.find(tp => tp.id === tid);
+                                                    return t ? html`<span class="bg-indigo-50 text-indigo-600 text-[10px] px-2 py-0.5 rounded mr-1">${t.name}</span>` : '';
+                                                })}
+                                            </td>
+                                            <td class="px-6 py-4 text-right text-xs text-slate-400 font-mono">${l.date}</td>
+                                        </tr>
+                                    `)}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                `;
+            }
+        }
+        customElements.define('view-checklist', ViewChecklist);
+
+        class ViewLectures extends BaseComponent {
+            static properties = { search: {type: String} };
+            constructor() { super(); this.search = ""; }
+
+            render() {
+                const { lectures, topics, activeBlockId } = this.state;
+                const isAllBlocks = activeBlockId === 'all';
+                const activeLectures = isAllBlocks ? lectures : lectures.filter(l => l.blockId === activeBlockId);
+
+                let filtered = activeLectures.filter(l => l.title.toLowerCase().includes(this.search.toLowerCase()));
+
+                return html`
+                    <section class="space-y-6">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-bold">Lecture Catalog</h2>
+                            ${!isAllBlocks ? html`<button @click="${() => this.app.openAddLecture()}" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Add Lecture</button>` : ''}
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100">
+                            <input type="text" placeholder="Search lectures..." 
+                                .value="${this.search}" @input="${(e) => this.search = e.target.value}"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${filtered.map(l => html`
+                                <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow relative group ${l.ingested ? 'opacity-60 grayscale-[0.5]' : ''}">
+                                    <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button @click="${() => this.app.openEditLecture(l.id)}" class="text-indigo-400 hover:text-indigo-600 text-[10px] font-bold">EDIT</button>
+                                        <button @click="${() => {if(confirm('Delete?')) store.deleteLecture(l.id)}}" class="text-red-300 hover:text-red-500">×</button>
+                                    </div>
+                                    <div class="flex items-start gap-2 pr-12">
+                                        ${l.ingested ? html`<span class="text-emerald-500 font-bold text-lg">✓</span>` : ''}
+                                        <div>
+                                            <p class="font-bold text-slate-800 ${l.ingested ? 'line-through' : ''}">${l.title}</p>
+                                            <p class="text-[10px] text-slate-400 font-bold uppercase">${l.date}</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 flex flex-wrap gap-1">
+                                        ${l.topics.map(tid => {
+                                            const t = topics.find(tp => tp.id === tid);
+                                            return t ? html`<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${t.name}</span>` : '';
+                                        })}
+                                    </div>
+                                </div>
+                            `)}
+                        </div>
+                    </section>
+                `;
+            }
+        }
+        customElements.define('view-lectures', ViewLectures);
+
+        class ViewHistory extends BaseComponent {
+            render() {
+                const { passes, topics, activeBlockId } = this.state;
+                const isAllBlocks = activeBlockId === 'all';
+                const activeTopics = isAllBlocks ? topics : topics.filter(t => t.blockId === activeBlockId);
+                const activeTopicIds = new Set(activeTopics.map(t => t.id));
+                const activePasses = passes.filter(p => activeTopicIds.has(p.topicId));
+
+                return html`
+                    <section class="space-y-6">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-bold">Pass History</h2>
+                            ${!isAllBlocks ? html`<button @click="${() => this.app.openLogPass()}" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Log New Pass</button>` : ''}
+                        </div>
+                        <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Date</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Topic</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Sp3/Quiz</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Mi</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Notes</th>
+                                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${activePasses.sort((a,b) => new Date(b.date) - new Date(a.date)).map(p => html`
+                                        <tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="px-6 py-3 text-xs text-slate-500 whitespace-nowrap">${p.date}</td>
+                                            <td class="px-6 py-3 text-xs font-bold text-slate-800">${topics.find(t => t.id === p.topicId)?.name || 'Unknown'}</td>
+                                            <td class="text-center text-xs font-medium">${p.sp3} / ${p.quiz}</td>
+                                            <td class="text-center text-xs font-bold text-indigo-600">${((0.7*p.sp3)+(0.3*p.quiz)).toFixed(2)}</td>
+                                            <td class="px-6 py-3 text-[11px] text-slate-500 max-w-xs italic">${p.note}</td>
+                                            <td class="text-right px-6 space-x-2">
+                                                <button @click="${() => this.app.openEditPass(p.id)}" class="text-indigo-300 hover:text-indigo-600 text-[10px] font-bold uppercase">Edit</button>
+                                                <button @click="${() => {if(confirm('Delete?')) store.deletePass(p.id)}}" class="text-red-200 hover:text-red-500 text-[10px] font-bold uppercase">Del</button>
+                                            </td>
+                                        </tr>
+                                    `)}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                `;
+            }
+        }
+        customElements.define('view-history', ViewHistory);
+
+        // --- Modal Components ---
+
+        class ModalTopic extends BaseComponent {
+            render() {
+                const item = this.editId ? this.state.topics.find(t => t.id === this.editId) : {};
+                return html`
+                    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+                            <h3 class="text-2xl font-bold mb-6 text-slate-800">${this.editId ? 'Edit' : 'New'} Master Topic</h3>
+                            <form @submit="${this.handleSubmit}" class="space-y-4">
+                                <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Topic Name" .value="${item.name || ''}">
+                                <input type="text" name="subject" class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Subject" .value="${item.subject || ''}">
+                                <input type="text" name="tags" class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Tags (comma sep)" .value="${(item.tags || []).join(', ')}">
+                                <div class="flex gap-3">
+                                    <button type="button" @click="${() => this.dispatchEvent(new Event('close'))}" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+            handleSubmit(e) {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const data = {
+                    name: fd.get('name'),
+                    subject: fd.get('subject'),
+                    tags: fd.get('tags').split(',').map(t => t.trim()).filter(Boolean)
+                };
+                if (this.editId) store.updateTopic(this.editId, data);
+                else store.addTopic(data);
+                this.dispatchEvent(new Event('close'));
+            }
+        }
+        customElements.define('modal-topic', ModalTopic);
+
+        class ModalLecture extends BaseComponent {
+            render() {
+                const item = this.editId ? this.state.lectures.find(l => l.id === this.editId) : { date: new Date().toISOString().split('T')[0], topics: [] };
+                const activeTopics = this.state.topics.filter(t => t.blockId === this.state.activeBlockId);
+
+                return html`
+                    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+                            <h3 class="text-2xl font-bold mb-6 text-slate-800">${this.editId ? 'Edit' : 'Add'} Lecture</h3>
+                            <form @submit="${this.handleSubmit}" class="space-y-4">
+                                <input type="text" name="title" required class="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Title" .value="${item.title || ''}">
+                                <input type="date" name="date" required class="w-full px-4 py-3 rounded-xl border border-slate-200" .value="${item.date || ''}">
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase">Relevant Topics</label>
+                                <div class="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 custom-scroll">
+                                    ${activeTopics.map(t => html`
+                                        <label class="flex items-center gap-2 p-1 hover:bg-slate-50 cursor-pointer text-sm">
+                                            <input type="checkbox" name="topics" value="${t.id}" ?checked="${(item.topics || []).includes(t.id)}" class="w-4 h-4 text-indigo-600 rounded"> ${t.name}
+                                        </label>
+                                    `)}
+                                    ${activeTopics.length === 0 ? html`<p class="text-xs italic text-slate-400">No topics in this block.</p>` : ''}
+                                </div>
+                                <div class="flex gap-3">
+                                    <button type="button" @click="${() => this.dispatchEvent(new Event('close'))}" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+            handleSubmit(e) {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const topics = [];
+                e.target.querySelectorAll('input[name="topics"]:checked').forEach(cb => topics.push(cb.value));
+                const data = { title: fd.get('title'), date: fd.get('date'), topics };
+                if (this.editId) store.updateLecture(this.editId, data);
+                else store.addLecture(data);
+                this.dispatchEvent(new Event('close'));
+            }
+        }
+        customElements.define('modal-lecture', ModalLecture);
+
+        class ModalPass extends BaseComponent {
+            render() {
+                const item = this.editId ? this.state.passes.find(p => p.id === this.editId) : { date: new Date().toISOString().split('T')[0] };
+                const activeTopics = this.state.topics.filter(t => t.blockId === this.state.activeBlockId);
+
+                return html`
+                    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+                            <h3 class="text-2xl font-bold mb-6 text-slate-800">${this.editId ? 'Edit' : 'Log'} Pass</h3>
+                            <form @submit="${this.handleSubmit}" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Topic</label>
+                                    <select name="topicId" required class="w-full px-4 py-3 rounded-xl border border-slate-200">
+                                        ${activeTopics.map(t => html`<option value="${t.id}" ?selected="${item.topicId === t.id}">${t.name}</option>`)}
+                                    </select>
+                                </div>
+                                <input type="date" name="date" required class="w-full px-4 py-3 rounded-xl border border-slate-200" .value="${item.date || ''}">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <input type="number" step="0.1" min="0" max="10" name="sp3" required placeholder="Sp3" class="w-full px-4 py-3 rounded-xl border border-slate-200" .value="${item.sp3 || ''}">
+                                    <input type="number" step="0.1" min="0" max="10" name="quiz" required placeholder="Quiz" class="w-full px-4 py-3 rounded-xl border border-slate-200" .value="${item.quiz || ''}">
+                                </div>
+                                <textarea name="note" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" placeholder="Sprint Notes...">${item.note || ''}</textarea>
+                                <div class="flex gap-3">
+                                    <button type="button" @click="${() => this.dispatchEvent(new Event('close'))}" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                                    <button type="submit" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+            handleSubmit(e) {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const data = {
+                    topicId: fd.get('topicId'),
+                    date: fd.get('date'),
+                    sp3: parseFloat(fd.get('sp3')),
+                    quiz: parseFloat(fd.get('quiz')),
+                    note: fd.get('note')
+                };
+                if (this.editId) store.updatePass(this.editId, data);
+                else store.addPass(data);
+                this.dispatchEvent(new Event('close'));
+            }
+        }
+        customElements.define('modal-pass', ModalPass);
+
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
+    <mastery-app></mastery-app>
+</body>
+</html>
