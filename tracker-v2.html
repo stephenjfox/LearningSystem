@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastery Optimization Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.1); }
+        .ingested-row { opacity: 0.5; filter: grayscale(1); }
+        .ingested-text { text-decoration: line-through; color: #94a3b8; }
+        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
+
+<div id="app" class="max-w-7xl mx-auto px-4 py-8 lg:px-8">
+    
+    <!-- Top Bar: Block Context Switcher -->
+    <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <div class="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-slate-200 card-shadow">
+            <span class="pl-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">Context:</span>
+            <select id="block-context-select" onchange="changeBlockContext()" class="bg-transparent text-sm font-bold text-indigo-700 px-2 py-1.5 outline-none cursor-pointer min-w-[120px]">
+                <!-- Injected via JS -->
+            </select>
+            <div class="h-6 w-px bg-slate-200 mx-1"></div>
+            <button onclick="toggleModal('block-manager-modal')" class="text-slate-400 hover:text-indigo-600 px-2 transition-colors" title="Manage Blocks">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+        </div>
+        <div class="flex gap-2">
+             <button onclick="exportData()" class="bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 transition-colors flex items-center gap-2">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Backup
+            </button>
+             <label class="bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 cursor-pointer transition-colors flex items-center gap-2">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                Restore <input type="file" id="import-input" class="hidden" accept=".json" onchange="importData(event)">
+            </label>
+            <button onclick="clearAllData()" class="bg-red-50 border border-red-100 px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:bg-red-100 transition-colors" title="Reset App">
+                Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- Header & Stats -->
+    <header class="mb-10">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Mastery Dashboard</h1>
+                <p class="text-slate-500 mt-1 font-medium" id="block-subtitle">Longitudinal View</p>
+            </div>
+            <div class="flex flex-wrap gap-4">
+                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[160px] relative group">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Harmonic Mean (Mh)</p>
+                    <div class="flex items-baseline gap-2">
+                        <p id="mh-value" class="text-3xl font-bold text-indigo-600">0.0</p>
+                        <p id="mh-target-display" class="text-xs font-bold text-slate-300">/ 0.0</p>
+                    </div>
+                    <button id="set-goal-btn" onclick="toggleModal('goal-modal')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-indigo-400 hover:text-indigo-600 uppercase">Set Goal</button>
+                </div>
+                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lecture Coverage</p>
+                    <p id="ingestion-count" class="text-3xl font-bold text-blue-500">0 / 0</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Topics Mastered</p>
+                    <p id="mastered-count" class="text-3xl font-bold text-emerald-500">0 / 0</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Goal Progress Bar -->
+        <div id="goal-progress-container" class="hidden bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+            <div class="flex justify-between items-center mb-2">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Block Mastery Progress</p>
+                <p id="goal-percent" class="text-xs font-black text-indigo-600">0%</p>
+            </div>
+            <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                <div id="goal-progress-bar" class="bg-indigo-600 h-full transition-all duration-1000" style="width: 0%"></div>
+            </div>
+            <p id="goal-status-text" class="text-[10px] text-slate-400 mt-2 font-medium italic"></p>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Sidebar -->
+        <aside class="lg:col-span-3 space-y-6">
+            <nav class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full text-left px-6 py-4 font-medium flex items-center gap-3 bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 transition-all">Topic Mastery</button>
+                <button onclick="switchView('checklist')" id="nav-checklist" class="nav-btn w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600 transition-all">Lecture Checklist</button>
+                <button onclick="switchView('lectures')" id="nav-lectures" class="nav-btn w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600 transition-all">Lecture Catalog</button>
+                <button onclick="switchView('history')" id="nav-history" class="nav-btn w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600 transition-all">Pass History</button>
+            </nav>
+
+            <div class="bg-indigo-600 rounded-2xl p-6 text-white card-shadow">
+                <h3 class="font-bold text-lg mb-2">Next Priority</h3>
+                <div id="priority-topic" class="bg-white/10 rounded-xl p-3 border border-white/20">
+                    <span class="text-xs uppercase font-bold opacity-70">Add topics to begin</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="lg:col-span-9">
+            <!-- Dashboard -->
+            <section id="view-dashboard" class="view space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-800">Topic Master List</h2>
+                    <button onclick="toggleModal('topic-modal')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Add Topic</button>
+                </div>
+                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100">
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Topic</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Mi</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topic-list-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Checklist View -->
+            <section id="view-checklist" class="view hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-800">Ingestion Checklist</h2>
+                    <p class="text-xs text-slate-400 italic">"Table stakes" documentation.</p>
+                </div>
+                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase w-12 text-center">Status</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Lecture</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Topics</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="checklist-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Lectures -->
+            <section id="view-lectures" class="view hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">Lecture Catalog</h2>
+                    <button onclick="toggleModal('lecture-modal')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Add Lecture</button>
+                </div>
+                
+                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex flex-wrap gap-4 items-end">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Search & Sort</label>
+                        <select id="lecture-sort" onchange="render()" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200">
+                            <option value="date-desc">Date (Newest First)</option>
+                            <option value="date-asc">Date (Oldest First)</option>
+                            <option value="title-asc">Title (A-Z)</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Filter by Topic</label>
+                        <select id="lecture-topic-filter" onchange="render()" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200">
+                            <option value="all">All Topics</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="lecture-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </section>
+
+            <!-- Pass History -->
+            <section id="view-history" class="view hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">Pass History</h2>
+                    <button onclick="toggleModal('pass-modal')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Log New Pass</button>
+                </div>
+                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Date</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Topic</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Sp3/Quiz</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Mi</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Notes</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-list-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<!-- BLOCK MANAGER MODAL -->
+<div id="block-manager-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+        <h3 class="text-2xl font-bold mb-4 text-slate-800">Manage Blocks</h3>
+        <p class="text-xs text-slate-500 mb-6">Create distinct learning blocks (e.g. "Renal", "Cardio"). You can rename "Legacy" blocks here.</p>
+        
+        <div class="space-y-3 mb-8">
+            <div id="block-list" class="max-h-60 overflow-y-auto space-y-3 p-1 custom-scroll"></div>
+        </div>
+
+        <form onsubmit="addBlock(event)" class="flex gap-2">
+            <input type="text" id="new-block-name" required class="flex-1 px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="New Block Name...">
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700">Add</button>
+        </form>
+        <div class="mt-4 text-center">
+             <button type="button" onclick="toggleModal('block-manager-modal')" class="text-sm font-bold text-slate-400 hover:text-slate-600">Close Manager</button>
+        </div>
+    </div>
+</div>
+
+<!-- GOAL MODAL -->
+<div id="goal-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-sm p-8 shadow-2xl">
+        <h3 class="text-2xl font-bold mb-4 text-slate-800">Set Block Goal</h3>
+        <p class="text-xs text-slate-500 mb-6">Define your target Harmonic Mean (Mh) for <span id="goal-modal-block-name" class="font-bold text-indigo-600">Current Block</span>.</p>
+        <form onsubmit="handleGoalSubmit(event)" class="space-y-4">
+            <input type="number" step="0.1" min="0.1" max="10" id="goal-mh-target" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 7.5">
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="toggleModal('goal-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Set Target</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- TOPIC MODAL -->
+<div id="topic-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+        <h3 class="text-2xl font-bold mb-6 text-slate-800">New Topic</h3>
+        <form onsubmit="addTopic(event)" class="space-y-4">
+            <input type="text" id="topic-name" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Topic Name">
+            <input type="text" id="topic-subject" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Subject (e.g. Physiology)">
+            
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Assign to Block</label>
+                <select id="topic-block-select" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none bg-white focus:ring-2 focus:ring-indigo-500"></select>
+            </div>
+
+            <div class="flex gap-3 pt-4">
+                <button type="button" onclick="toggleModal('topic-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- LECTURE MODAL -->
+<div id="lecture-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+        <h3 id="lecture-modal-title" class="text-2xl font-bold mb-6 text-slate-800">Add Lecture</h3>
+        <form onsubmit="handleLectureSubmit(event)" class="space-y-4">
+            <input type="hidden" id="lecture-edit-id">
+            <input type="text" id="lecture-title" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Lecture Title">
+            <div class="grid grid-cols-2 gap-4">
+                <input type="date" id="lecture-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+                <div>
+                     <!-- Block select for the lecture itself -->
+                    <select id="lecture-block-select" class="w-full h-full px-4 py-3 rounded-xl border border-slate-200 outline-none bg-white focus:ring-2 focus:ring-indigo-500 text-sm"></select>
+                </div>
+            </div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase px-1">Tag Relevant Topics (All Blocks)</label>
+            <div id="topic-selector-container" class="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-3 custom-scroll bg-slate-50"></div>
+            <div class="flex gap-3">
+                <button type="button" onclick="toggleModal('lecture-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                <button type="submit" id="lecture-submit-btn" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- PASS MODAL -->
+<div id="pass-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+        <h3 id="pass-modal-title" class="text-2xl font-bold mb-6 text-slate-800">Log Pass</h3>
+        <form onsubmit="handlePassSubmit(event)" class="space-y-4">
+            <input type="hidden" id="pass-edit-id">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Target Topic</label>
+                <select id="pass-topic-id" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"></select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Pass Date</label>
+                <input type="date" id="pass-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <input type="number" step="0.1" min="0" max="10" id="pass-sp3" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sp3 (0-10)">
+                <input type="number" step="0.1" min="0" max="10" id="pass-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Quiz (0-10)">
+            </div>
+            <textarea id="pass-note" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sprint Notes..."></textarea>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="toggleModal('pass-modal')" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                <button type="submit" id="pass-submit-btn" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold">Log Pass</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // --- STATE & MIGRATION ---
+    let state = { 
+        blocks: [], 
+        topics: [], 
+        lectures: [], 
+        passes: [], 
+        activeBlockId: 'all' 
+    };
+
+    function init() {
+        const saved = localStorage.getItem('med_mastery_v3');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                state = { ...state, ...parsed }; // Merge to ensure new fields exist
+            } catch (e) { console.error("Data error", e); }
+        } else {
+            // Check for v2 data to migrate
+            const v2 = localStorage.getItem('med_mastery_v2');
+            if (v2) {
+                migrateV2toV3(JSON.parse(v2));
+            } else {
+                // Fresh Start
+                state.blocks = [{ id: 'b1', name: 'Block 1 (General)', targetMh: 7.0 }];
+                state.activeBlockId = 'b1';
+            }
+        }
+        render();
+    }
+
+    function migrateV2toV3(v2Data) {
+        alert("Upgrading database to V3 (Block Architecture)...");
+        const defaultBlockId = 'b_legacy_' + Date.now();
+        state.blocks = [{ id: defaultBlockId, name: 'Legacy Block', targetMh: v2Data.masteryGoal || 7.0 }];
+        
+        state.topics = (v2Data.topics || []).map(t => ({ ...t, blockId: defaultBlockId }));
+        state.lectures = (v2Data.lectures || []).map(l => ({ ...l, blockId: defaultBlockId }));
+        state.passes = v2Data.passes || [];
+        state.activeBlockId = defaultBlockId;
+        save();
+    }
+
+    function save() {
+        localStorage.setItem('med_mastery_v3', JSON.stringify(state));
+        render();
+    }
+
+    // --- DATA HELPERS ---
+    function getActiveTopics() {
+        if (state.activeBlockId === 'all') return state.topics;
+        return state.topics.filter(t => t.blockId === state.activeBlockId);
+    }
+    
+    function getActiveLectures() {
+        if (state.activeBlockId === 'all') return state.lectures;
+        return state.lectures.filter(l => l.blockId === state.activeBlockId);
+    }
+
+    function getTopicStats(topicId) {
+        const topicPasses = state.passes.filter(p => p.topicId === topicId);
+        if (topicPasses.length === 0) return { mi: 0, count: 0 };
+        const avgSp3 = topicPasses.reduce((acc, p) => acc + p.sp3, 0) / topicPasses.length;
+        const avgQuiz = topicPasses.reduce((acc, p) => acc + p.quiz, 0) / topicPasses.length;
+        return { mi: ((0.7 * avgSp3) + (0.3 * avgQuiz)).toFixed(2), count: topicPasses.length };
+    }
+
+    function calculateMh(topicsSubset) {
+        const mis = topicsSubset.map(t => parseFloat(getTopicStats(t.id).mi)).filter(mi => mi > 0);
+        return mis.length === 0 ? 0 : (mis.length / mis.reduce((acc, mi) => acc + (1/mi), 0)).toFixed(2);
+    }
+
+    // --- ACTIONS ---
+    function changeBlockContext() {
+        state.activeBlockId = document.getElementById('block-context-select').value;
+        save();
+    }
+
+    function addBlock(e) {
+        e.preventDefault();
+        state.blocks.push({ 
+            id: 'b'+Date.now(), 
+            name: document.getElementById('new-block-name').value, 
+            targetMh: 7.0 
+        });
+        document.getElementById('new-block-name').value = "";
+        renderBlockList();
+        render(); // Refresh header select
+        save();
+    }
+
+    function renameBlock(id) {
+        const block = state.blocks.find(b => b.id === id);
+        const newName = prompt("Rename block:", block.name);
+        if (newName && newName.trim() !== "") {
+            block.name = newName;
+            renderBlockList();
+            render();
+            save();
+        }
+    }
+
+    function deleteBlock(id) {
+        // Safe delete check
+        const hasTopics = state.topics.some(t => t.blockId === id);
+        const hasLectures = state.lectures.some(l => l.blockId === id);
+        
+        if (hasTopics || hasLectures) {
+            alert("Cannot delete this block because it contains topics or lectures. Please rename it, or move its items (future feature) first.");
+            return;
+        }
+
+        if (confirm("Delete this empty block?")) {
+            state.blocks = state.blocks.filter(b => b.id !== id);
+            if (state.activeBlockId === id) state.activeBlockId = 'all';
+            save();
+            renderBlockList();
+        }
+    }
+
+    function addTopic(e) {
+        e.preventDefault();
+        const blockId = document.getElementById('topic-block-select').value;
+        state.topics.push({ 
+            id: 't'+Date.now(), 
+            name: document.getElementById('topic-name').value, 
+            subject: document.getElementById('topic-subject').value,
+            blockId: blockId
+        });
+        e.target.reset(); toggleModal('topic-modal'); save();
+    }
+
+    function handleLectureSubmit(e) {
+        e.preventDefault();
+        const editId = document.getElementById('lecture-edit-id').value;
+        const title = document.getElementById('lecture-title').value;
+        const date = document.getElementById('lecture-date').value;
+        const blockId = document.getElementById('lecture-block-select').value;
+        const selectedTopics = Array.from(document.querySelectorAll('.topic-check:checked')).map(cb => cb.value);
+
+        if (editId) {
+            const index = state.lectures.findIndex(l => l.id === editId);
+            if (index !== -1) state.lectures[index] = { ...state.lectures[index], title, date, topics: selectedTopics, blockId };
+        } else {
+            state.lectures.push({ id: 'l'+Date.now(), title, date, topics: selectedTopics, ingested: false, blockId });
+        }
+        toggleModal('lecture-modal'); save();
+    }
+
+    function handlePassSubmit(e) {
+        e.preventDefault();
+        const editId = document.getElementById('pass-edit-id').value;
+        const topicId = document.getElementById('pass-topic-id').value;
+        const sp3 = parseFloat(document.getElementById('pass-sp3').value);
+        const quiz = parseFloat(document.getElementById('pass-quiz').value);
+        const date = document.getElementById('pass-date').value;
+        const note = document.getElementById('pass-note').value;
+
+        if (editId) {
+            const idx = state.passes.findIndex(p => p.id === editId);
+            if (idx !== -1) state.passes[idx] = { ...state.passes[idx], topicId, sp3, quiz, date, note };
+        } else state.passes.push({ id: 'p'+Date.now(), topicId, sp3, quiz, date, note });
+        toggleModal('pass-modal'); save();
+    }
+
+    function handleGoalSubmit(e) {
+        e.preventDefault();
+        const target = parseFloat(document.getElementById('goal-mh-target').value);
+        const block = state.blocks.find(b => b.id === state.activeBlockId);
+        if (block) {
+            block.targetMh = target;
+            toggleModal('goal-modal');
+            save();
+        }
+    }
+
+    function toggleIngested(id) {
+        const l = state.lectures.find(x => x.id === id);
+        if(l) { l.ingested = !l.ingested; save(); }
+    }
+    
+    // CRUD deletes
+    function deleteTopic(id) { if(confirm("Delete topic?")) { state.topics = state.topics.filter(t => t.id !== id); state.passes = state.passes.filter(p => p.topicId !== id); save(); } }
+    function deleteLecture(id) { if(confirm("Delete lecture?")) { state.lectures = state.lectures.filter(l => l.id !== id); save(); } }
+    function deletePass(id) { if(confirm("Delete pass?")) { state.passes = state.passes.filter(p => p.id !== id); save(); } }
+
+    // --- UI/MODAL LOGIC ---
+    function switchView(viewId) {
+        document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+        document.getElementById('view-' + viewId).classList.remove('hidden');
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-l-4', 'border-indigo-600'));
+        document.getElementById('nav-' + viewId).classList.add('bg-indigo-50', 'text-indigo-700', 'border-l-4', 'border-indigo-600');
+    }
+
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.toggle('hidden');
+        if (modal.classList.contains('hidden')) return;
+
+        // Smart Defaulting for Block Selectors
+        if (id === 'topic-modal' || id === 'lecture-modal') {
+            const selId = id === 'topic-modal' ? 'topic-block-select' : 'lecture-block-select';
+            const sel = document.getElementById(selId);
+            sel.innerHTML = state.blocks.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+            
+            // DEFAULTING LOGIC: If a block is active (not 'all'), select it.
+            if (state.activeBlockId !== 'all') {
+                sel.value = state.activeBlockId;
+            } else if (state.blocks.length > 0) {
+                 sel.value = state.blocks[0].id;
+            }
+            
+            if (id === 'lecture-modal') {
+                 const editId = document.getElementById('lecture-edit-id').value;
+                 if(!editId) { // Reset
+                     document.getElementById('lecture-modal-title').innerText = "Add Lecture";
+                     document.getElementById('lecture-title').value = "";
+                     document.getElementById('lecture-date').value = new Date().toISOString().split('T')[0];
+                 }
+                 populateTopicSelectors();
+            }
+        }
+        if (id === 'pass-modal') populatePassTopicDropdown();
+        if (id === 'block-manager-modal') renderBlockList();
+        if (id === 'goal-modal') {
+            const block = state.blocks.find(b => b.id === state.activeBlockId);
+            document.getElementById('goal-modal-block-name').innerText = block ? block.name : 'Unknown';
+            document.getElementById('goal-mh-target').value = block ? block.targetMh : 7.0;
+        }
+    }
+
+    function openEditLecture(id) {
+        const l = state.lectures.find(x => x.id === id);
+        if(!l) return;
+        document.getElementById('lecture-edit-id').value = l.id;
+        toggleModal('lecture-modal');
+        document.getElementById('lecture-title').value = l.title;
+        document.getElementById('lecture-date').value = l.date;
+        document.getElementById('lecture-block-select').value = l.blockId || (state.blocks[0] ? state.blocks[0].id : '');
+        setTimeout(() => {
+            document.querySelectorAll('.topic-check').forEach(cb => { cb.checked = l.topics.includes(cb.value); });
+        }, 10);
+    }
+
+    function getLectureDisplayComparator(selectedSort) {
+        // based on the selected sort (date-asc, date-desc, title-asc) give a simple comparator that will
+        // order our lectures appropriately
+        if (selectedSort === 'date-asc') {
+            return (a, b) => new Date(a.date) - new Date(b.date);
+        } else if (selectedSort === 'title-asc') {
+            return (a, b) => a.title.localeCompare(b.title);
+        } else {
+            // date-desc is the default
+            return (a, b) => new Date(b.date) - new Date(a.date);
+        }
+    }
+
+    function openEditPass(id) {
+        const p = state.passes.find(x => x.id === id);
+        if(!p) return;
+        document.getElementById('pass-edit-id').value = p.id;
+        toggleModal('pass-modal');
+        document.getElementById('pass-topic-id').value = p.topicId;
+        document.getElementById('pass-date').value = p.date;
+        document.getElementById('pass-sp3').value = p.sp3;
+        document.getElementById('pass-quiz').value = p.quiz;
+        document.getElementById('pass-note').value = p.note || "";
+    }
+
+    function populateTopicSelectors() {
+        // GROUPED TOPIC SELECTOR: Show ALL topics, grouped by Block
+        const grouped = {};
+        state.blocks.forEach(b => grouped[b.id] = { name: b.name, topics: [] });
+        state.topics.forEach(t => {
+            if (grouped[t.blockId]) grouped[t.blockId].topics.push(t);
+            else { 
+                // Handle topics with missing/deleted blocks
+                 if(!grouped['orphan']) grouped['orphan'] = { name: 'Orphaned / Other', topics: [] };
+                 grouped['orphan'].topics.push(t);
+            }
+        });
+
+        let html = '';
+        Object.values(grouped).forEach(group => {
+            if (group.topics.length > 0) {
+                html += `<div class="mb-2"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 sticky top-0 bg-slate-50 py-1">${group.name}</p>`;
+                html += group.topics.map(t => `
+                    <label class="flex items-center gap-2 p-1.5 hover:bg-white rounded-lg cursor-pointer text-sm transition-colors">
+                        <input type="checkbox" value="${t.id}" class="topic-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"> ${t.name}
+                    </label>`).join('');
+                html += `</div>`;
+            }
+        });
+        
+        document.getElementById('topic-selector-container').innerHTML = html || '<p class="text-xs text-slate-400 italic">No topics available.</p>';
+    }
+
+    function populatePassTopicDropdown() {
+        // Show active topics. If in 'All Time', show all grouped by block.
+        const activeT = getActiveTopics();
+        
+        // Simple sort by name
+        activeT.sort((a,b) => a.name.localeCompare(b.name));
+        
+        document.getElementById('pass-topic-id').innerHTML = activeT.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    }
+
+    function renderBlockList() {
+        document.getElementById('block-list').innerHTML = state.blocks.map(b => `
+            <div class="flex justify-between items-center bg-white border border-slate-100 p-3 rounded-xl shadow-sm">
+                <span class="text-sm font-bold text-slate-700">${b.name}</span>
+                <div class="flex gap-2">
+                    <button onclick="renameBlock('${b.id}')" class="text-indigo-400 hover:text-indigo-600 text-xs font-bold uppercase px-2 py-1 bg-indigo-50 rounded-md">Rename</button>
+                    <button onclick="deleteBlock('${b.id}')" class="text-red-300 hover:text-red-500 text-xs uppercase font-bold px-2 py-1 hover:bg-red-50 rounded-md">Del</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function exportData() {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `Mastery_v3_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    }
+    
+    function importData(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if (!data.blocks) { migrateV2toV3(data); } 
+                else { state = data; save(); }
+            } catch(err) { alert("Invalid JSON"); }
+        };
+        reader.readAsText(file);
+    }
+    
+    function clearAllData() { if(confirm("Clear all data?")) { localStorage.removeItem('med_mastery_v2'); localStorage.removeItem('med_mastery_v3'); location.reload(); }}
+
+    function resetLectureFilters() {
+        document.getElementById('lecture-topic-filter').value = "all";
+        render();
+    }
+
+    // --- MAIN RENDER ---
+    function render() {
+        const activeTopics = getActiveTopics();
+        const activeLectures = getActiveLectures();
+        
+        // 1. Context Dropdown & Header
+        const ctxSelect = document.getElementById('block-context-select');
+        // Only rebuild options if count changes or active block changes to avoid glitching, but for simple app rebuild is fine.
+        ctxSelect.innerHTML = `<option value="all">All Time (Longitudinal)</option>` + 
+            state.blocks.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+        ctxSelect.value = state.activeBlockId;
+        
+        const currentBlock = state.blocks.find(b => b.id === state.activeBlockId);
+        document.getElementById('block-subtitle').innerText = currentBlock ? `Current Focus: ${currentBlock.name}` : 'Longitudinal View';
+
+        // 2. Stats
+        const mh = calculateMh(activeTopics);
+        document.getElementById('mh-value').innerText = mh;
+        
+        // 3. Goal Progress
+        const goalContainer = document.getElementById('goal-progress-container');
+        const setGoalBtn = document.getElementById('set-goal-btn');
+        
+        if (state.activeBlockId === 'all') {
+            goalContainer.classList.add('hidden');
+            document.getElementById('mh-target-display').innerText = "";
+            setGoalBtn.classList.add('hidden'); // Disable goal setting in All Time
+        } else if (currentBlock) {
+            setGoalBtn.classList.remove('hidden');
+            document.getElementById('mh-target-display').innerText = `/ ${currentBlock.targetMh}`;
+            goalContainer.classList.remove('hidden');
+            
+            const percent = Math.min(100, Math.round((mh / currentBlock.targetMh) * 100));
+            document.getElementById('goal-progress-bar').style.width = `${percent}%`;
+            document.getElementById('goal-percent').innerText = `${percent}%`;
+            const remaining = (currentBlock.targetMh - mh).toFixed(2);
+            document.getElementById('goal-status-text').innerText = percent >= 100 ? "Goal Met." : `${remaining} points to target.`;
+        }
+
+        const ingestedCount = activeLectures.filter(l => l.ingested).length;
+        document.getElementById('ingestion-count').innerText = `${ingestedCount} / ${activeLectures.length}`;
+        document.getElementById('mastered-count').innerText = `${activeTopics.filter(t => getTopicStats(t.id).mi >= 7).length} / ${activeTopics.length}`;
+
+        // 4. Topic List
+        const sortedTopics = [...activeTopics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
+        const priorityEl = document.getElementById('priority-topic');
+        if (sortedTopics.length > 0) {
+            const top = sortedTopics[0]; const s = getTopicStats(top.id);
+            priorityEl.innerHTML = `<div class="flex justify-between font-bold text-sm"><span>${top.name}</span><span>Mi: ${s.mi}</span></div>`;
+        } else priorityEl.innerHTML = `<p class="text-xs opacity-50 italic">No topics in this block</p>`;
+
+        document.getElementById('topic-list-body').innerHTML = sortedTopics.map(t => {
+            const s = getTopicStats(t.id);
+            return `<tr><td class="px-6 py-4 font-bold text-slate-800">${t.name}</td><td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${s.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${s.mi}</span></td><td class="text-right px-6"><button onclick="deleteTopic('${t.id}')" class="text-slate-300 hover:text-red-500">×</button></td></tr>`;
+        }).join('');
+
+        // 5. Checklist
+        document.getElementById('checklist-body').innerHTML = [...activeLectures].sort((a, b) => new Date(b.date) - new Date(a.date)).map(l => {
+            const badges = l.topics.map(tid => `<span class="bg-indigo-50 text-indigo-600 text-[10px] px-2 py-0.5 rounded mr-1">${state.topics.find(t=>t.id===tid)?.name || '...'}</span>`).join('');
+            return `<tr class="${l.ingested ? 'ingested-row' : ''}">
+                <td class="px-6 py-4 text-center"><input type="checkbox" ${l.ingested ? 'checked' : ''} onchange="toggleIngested('${l.id}')" class="w-5 h-5 cursor-pointer text-blue-600 rounded"></td>
+                <td class="px-6 py-4 font-bold text-slate-800 ${l.ingested ? 'ingested-text' : ''}">${l.title}</td>
+                <td class="px-6 py-4">${badges}</td>
+                <td class="px-6 py-4 text-right text-xs text-slate-400 font-mono">${l.date}</td>
+            </tr>`;
+        }).join('') || '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">No lectures in this block.</td></tr>';
+
+        // 6. Lecture Grid
+        // Fill Topic Filter specific to this view
+        const topicFilter = document.getElementById('lecture-topic-filter');
+        const currFilter = topicFilter.value;
+        topicFilter.innerHTML = '<option value="all">All Topics</option>' + activeTopics.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        // Restore filter if still valid
+        if ([...activeTopics].some(t => t.id === currFilter)) topicFilter.value = currFilter; 
+        
+        let displayLectures = [...activeLectures];
+        if (topicFilter.value !== 'all') displayLectures = displayLectures.filter(l => l.topics.includes(topicFilter.value));
+        displayLectures = displayLectures.toSorted(getLectureDisplayComparator(document.getElementById('lecture-sort').value));
+        document.getElementById('lecture-grid').innerHTML = displayLectures.map(l => `
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow relative group ${l.ingested ? 'opacity-60 grayscale-[0.5]' : ''}">
+                <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="openEditLecture('${l.id}')" class="text-indigo-400 font-bold text-[10px]">EDIT</button>
+                    <button onclick="deleteLecture('${l.id}')" class="text-red-300 hover:text-red-500">×</button>
+                </div>
+                <div class="flex items-start gap-2 pr-8">
+                    ${l.ingested ? '<span class="text-emerald-500 font-bold">✓</span>' : ''}
+                    <div><p class="font-bold text-slate-800 ${l.ingested ? 'line-through decoration-emerald-500/50' : ''}">${l.title}</p><p class="text-[10px] text-slate-400 font-bold uppercase">${l.date}</p></div>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-1">${l.topics.map(tid => `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${state.topics.find(t=>t.id===tid)?.name || '...'}</span>`).join('')}</div>
+            </div>
+        `).join('');
+
+        // 7. History
+        // Usually you want to see history relevant to the block.
+        const relevantPasses = state.passes.filter(p => {
+            const t = state.topics.find(top => top.id === p.topicId);
+            return t && (state.activeBlockId === 'all' || t.blockId === state.activeBlockId);
+        });
+
+        document.getElementById('history-list-body').innerHTML = relevantPasses.sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => `
+            <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-6 py-3 text-xs text-slate-500 whitespace-nowrap">${p.date}</td>
+                <td class="px-6 py-3 text-xs font-bold text-slate-800">${state.topics.find(t=>t.id===p.topicId)?.name || 'Unknown'}</td>
+                <td class="text-center text-xs font-medium whitespace-nowrap">${p.sp3} / ${p.quiz}</td>
+                <td class="text-center text-xs font-bold text-indigo-600">${((0.7*p.sp3)+(0.3*p.quiz)).toFixed(2)}</td>
+                <td class="px-6 py-3 text-[11px] text-slate-500 max-w-xs italic break-words">${p.note || '—'}</td>
+                <td class="text-right px-6 space-x-2 whitespace-nowrap">
+                    <button onclick="openEditPass('${p.id}')" class="text-indigo-300 hover:text-indigo-600 text-[10px] font-bold uppercase">Edit</button>
+                    <button onclick="deletePass('${p.id}')" class="text-red-200 hover:text-red-500 text-[10px] font-bold uppercase">Del</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
