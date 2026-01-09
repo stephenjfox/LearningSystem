@@ -14,6 +14,157 @@
         .ingested-text { text-decoration: line-through; color: #94a3b8; }
         input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
     </style>
+    <style>
+
+        .system-guide-container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .guide-header {
+            background: var(--primary);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .guide-header h2 { margin: 0; font-weight: 600; }
+        .guide-header p { margin: 0.5rem 0 0; opacity: 0.9; font-size: 0.9rem; }
+
+        /* Timer Section */
+        .timer-widget {
+            background: #1e293b;
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin: 0.5rem 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timer-controls button {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            margin: 0 4px;
+        }
+        .timer-controls button:hover { background: rgba(255,255,255,0.2); }
+        .timer-controls button.active { background: var(--success); border-color: var(--success); color: white; }
+        .timer-controls button.reset { color: #fca5a5; border-color: rgba(239,68,68,0.3); }
+
+        .timer-mode-switch {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+        }
+        .mode-btn { cursor: pointer; padding-bottom: 2px; }
+        .mode-btn.selected { color: white; border-bottom: 2px solid var(--accent); }
+
+        /* Phases & Steps */
+        .phase-divider {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #e2e8f0;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .steps-list {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .step-item {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.25rem 1.5rem;
+            transition: background 0.2s;
+        }
+        .step-item:last-child { border-bottom: none; }
+        .step-item:hover { background: #f8fafc; }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .step-desc {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-left: calc(24px + 1rem);
+        }
+
+        .bloom-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        .step-check {
+            margin-left: calc(24px + 1rem);
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text);
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        .step-check:hover { opacity: 1; }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
 
@@ -100,6 +251,9 @@
                 </button>
                 <button id="nav-history" class="nav-link w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600 transition-all">
                     Pass History
+                </button>
+                <button id="nav-walkthrough" class="nav-link w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600 transition-all">
+                    Walkthrough
                 </button>
             </nav>
 
@@ -214,6 +368,119 @@
                         </thead>
                         <tbody id="history-list-body" class="divide-y divide-slate-100"></tbody>
                     </table>
+                </div>
+            </section>
+            <section id="view-walkthrough" class="view hidden space-y-6">
+                <div class="system-guide-container">
+                    
+                    <header class="guide-header bg-indigo-600 square-2xl p-6 text-white card-shadow">
+                        <h2>The Learning System</h2>
+                        <p>From First Principles to High-Yield Synthesis</p>
+                    </header>
+
+                    <!-- Timer Widget -->
+                    <div class="timer-widget">
+                        <div class="timer-mode-switch">
+                            <span class="mode-btn selected" onclick="setTimerMode('stopwatch')">Stopwatch</span>
+                            <span class="mode-btn" onclick="setTimerMode('pomodoro')">Pomodoro (25m)</span>
+                        </div>
+                        <div class="timer-display" id="timerDisplay">00:00</div>
+                        <div class="timer-controls">
+                            <button id="btnStart" onclick="toggleTimer()">Start Focus</button>
+                            <button class="reset" onclick="resetTimer()">Reset</button>
+                        </div>
+                    </div>
+
+                    <ul class="steps-list">
+                        
+                        <!-- Phase 1: Deep Work (Input/Processing) -->
+                        <li class="phase-divider">Phase 1: Concept Deconstruction</li>
+                        
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-number">1</span>
+                                <span class="step-title">Scope & Definition</span>
+                                <span class="bloom-badge">Understand</span>
+                            </div>
+                            <div class="step-desc">
+                                Select a high-yield topic. Define the boundaries: What is this *not*? Identify the "First Principles" mechanism driving the pathology.
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-number">2</span>
+                                <span class="step-title">Mechanism Mapping</span>
+                                <span class="bloom-badge">Analyze</span>
+                            </div>
+                            <div class="step-desc">
+                                Sketch the physiological pathway. Identify the exact break point in the chain. 
+                                <em>If you can't draw the mechanism, you cannot write the question.</em>
+                            </div>
+                            <label class="step-check">
+                                <input type="checkbox"> Can I explain the "Why" simply?
+                            </label>
+                        </li>
+
+                        <!-- Phase 2: Synthesis (The "Free Recall" Creation) -->
+                        <li class="phase-divider">Phase 2: Vignette Construction</li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-number">3</span>
+                                <span class="step-title">The NBME Vignette</span>
+                                <span class="bloom-badge">Synthesize</span>
+                            </div>
+                            <div class="step-desc">
+                                Draft the patient story. Use <strong>Demographics, Duration, & Dynamics</strong> (symptoms). 
+                                Avoid buzzwords; describe the finding (e.g., "staccato cough" instead of "pertussis").
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-number">4</span>
+                                <span class="step-title">Distractor Logic</span>
+                                <span class="bloom-badge">Evaluate</span>
+                            </div>
+                            <div class="step-desc">
+                                Generate 4 wrong answers. Each must be the correct answer for a <em>different</em> disease in the differential.
+                            </div>
+                            <label class="step-check">
+                                <input type="checkbox"> Are distractors distinct pathologies?
+                            </label>
+                        </li>
+
+                        <!-- Phase 3: Quality Control (Evaluation) -->
+                        <li class="phase-divider">Phase 3: Taxonomy Audit</li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-number">5</span>
+                                <span class="step-title">The "Two-Step" Check</span>
+                                <span class="bloom-badge">Analyze</span>
+                            </div>
+                            <div class="step-desc">
+                                Does the question require identifying the diagnosis first, then answering a secondary question (e.g., side effect of the treatment)?
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-number">6</span>
+                                <span class="step-title">Skew Difficulty</span>
+                                <span class="bloom-badge">Evaluate</span>
+                            </div>
+                            <div class="step-desc">
+                                Verify the cognitive load. Is this purely recall (bad) or does it require evaluating competing data (good)? 
+                                <em>Aim for Negative Skew (Harder).</em>
+                            </div>
+                            <label class="step-check">
+                                <input type="checkbox"> Is it impossible to answer by keyword matching?
+                            </label>
+                        </li>
+
+                    </ul>
                 </div>
             </section>
         </main>
@@ -1009,6 +1276,79 @@ function handleBlockSubmit(e) {
         document.getElementById('cancel-goal-modal').addEventListener('click', () => toggleModal('goal-modal'));
         document.getElementById('cancel-block-modal').addEventListener('click', () => toggleModal('block-modal'));
     }
+    // Timer  JS deps
+        // -- Timer Logic --
+    let timerInterval = null;
+    let seconds = 0;
+    let isRunning = false;
+    let mode = 'stopwatch'; 
+    let pomodoroTime = 25 * 60;
+
+    const display = document.getElementById('timerDisplay');
+    const btnStart = document.getElementById('btnStart');
+    const modeBtns = document.querySelectorAll('.mode-btn');
+
+    function formatTime(totalSeconds) {
+        const m = Math.floor(Math.abs(totalSeconds) / 60).toString().padStart(2, '0');
+        const s = (Math.abs(totalSeconds) % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    function updateDisplay() {
+        if (mode === 'stopwatch') {
+            display.innerText = formatTime(seconds);
+        } else {
+            const remaining = pomodoroTime - seconds;
+            display.innerText = formatTime(remaining);
+            if (remaining <= 0) {
+                stopTimer();
+                // In a real app, maybe play a sound here
+            }
+        }
+    }
+
+    function toggleTimer() {
+        if (isRunning) {
+            stopTimer();
+        } else {
+            startTimer();
+        }
+    }
+
+    function startTimer() {
+        isRunning = true;
+        btnStart.innerText = "Pause";
+        btnStart.classList.add('active');
+        timerInterval = setInterval(() => {
+            seconds++;
+            updateDisplay();
+        }, 1000);
+    }
+
+    function stopTimer() {
+        isRunning = false;
+        btnStart.innerText = "Resume";
+        btnStart.classList.remove('active');
+        clearInterval(timerInterval);
+    }
+
+    function resetTimer() {
+        stopTimer();
+        seconds = 0;
+        btnStart.innerText = "Start Focus";
+        updateDisplay();
+    }
+
+    function setTimerMode(newMode) {
+        mode = newMode;
+        resetTimer();
+        modeBtns.forEach(btn => {
+            // specific logic to highlight the correct text mode
+            const isSelected = btn.innerText.toLowerCase().includes(newMode === 'stopwatch' ? 'stopwatch' : 'pomodoro');
+            btn.classList.toggle('selected', isSelected);
+        });
+    }
+
 
     document.addEventListener('DOMContentLoaded', init);
 </script>
