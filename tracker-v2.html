@@ -479,6 +479,14 @@
         toggleModal('topic-modal');
     }
 
+    function deleteTopic(id) { 
+        if(confirm("Delete topic and its history?")) { 
+            state.topics = state.topics.filter(t => t.id !== id); 
+            state.passes = state.passes.filter(p => p.topicId !== id); 
+            save(); 
+        }
+    }
+
     function openAddLecture() {
         toggleModal('lecture-modal');
     }
@@ -496,6 +504,13 @@
         setTimeout(() => {
             document.querySelectorAll('.topic-check').forEach(cb => { cb.checked = l.topics.includes(cb.value); });
         }, 10);
+    }
+
+    function deleteLecture(id) { 
+        if(confirm("Delete lecture?")) { 
+            state.lectures = state.lectures.filter(l => l.id !== id); 
+            save(); 
+        } 
     }
 
     function openLogPass() {
@@ -517,6 +532,13 @@
         document.getElementById('pass-quiz').value = p.quiz;
         document.getElementById('pass-note').value = p.note || "";
         toggleModal('pass-modal');
+    }
+
+    function deletePass(id) { 
+        if(confirm("Permanently delete this pass?")) { 
+            state.passes = state.passes.filter(p => p.id !== id); 
+            save(); 
+        } 
     }
 
     function openSetGoal() {
