@@ -26,9 +26,14 @@
                 <p class="text-slate-500 mt-1">Brown Alpert Medical School Learning System</p>
                 <div class="mt-6 flex items-center gap-3">
                     <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Block:</label>
-                    <select id="block-selector" class="bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 min-w-[200px] shadow-sm">
-                        <!-- Populated by JS -->
-                    </select>
+                    <div class="flex items-center gap-2">
+                        <select id="block-selector" class="bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 min-w-[200px] shadow-sm">
+                            <!-- Populated by JS -->
+                        </select>
+                        <button id="rename-block-btn" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors" title="Rename Block">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="flex flex-wrap gap-4">
@@ -427,6 +432,16 @@
         save();
     }
 
+    function renameActiveBlock() {
+        const block = getActiveBlock();
+        if (!block) return;
+        const newName = prompt("Rename Block:", block.name);
+        if (newName && newName.trim() !== "") {
+            block.name = newName.trim();
+            save(); // Render will update the selector options
+        }
+    }
+
     // --- Topic Operations ---
 
     function addTopic(e) {
@@ -753,6 +768,7 @@
         if (blockSelector) {
             blockSelector.addEventListener('change', handleBlockChange);
         }
+        document.getElementById('rename-block-btn').addEventListener('click', renameActiveBlock);
 
         document.querySelector('#set-goal-btn').addEventListener('click', () => toggleModal('goal-modal'));
         document.getElementById('export-data-btn').addEventListener('click', exportData);
