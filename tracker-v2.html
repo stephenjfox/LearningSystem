@@ -582,7 +582,7 @@
     function switchView(viewId) {
         document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
         document.getElementById('view-' + viewId).classList.remove('hidden');
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-l-4', 'border-indigo-600'));
+        document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-l-4', 'border-indigo-600'));
         document.getElementById('nav-' + viewId).classList.add('bg-indigo-50', 'text-indigo-700', 'border-l-4', 'border-indigo-600');
     }
 
@@ -760,7 +760,7 @@
         document.getElementById('import-input-field').addEventListener('change', importData);
 
         document.getElementById('main-nav').addEventListener('click', (e) => {
-            const target = e.target.closest('.nav-btn');
+            const target = e.target.closest('.nav-link');
             if (target) {
                 const viewId = target.id.replace('nav-', '');
                 switchView(viewId);
