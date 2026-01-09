@@ -23,7 +23,7 @@
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
             <div>
                 <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Mastery Optimization Dashboard</h1>
-                <p class="text-slate-500 mt-1">Brown Alpert Medical School Learning System</p>
+                <p class="text-slate-500 mt-1">Brown University's Warren Alpert Medical School Learning System</p>
                 <div class="mt-6 flex items-center gap-3">
                     <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Block:</label>
                     <div class="flex items-center gap-2">
@@ -162,8 +162,12 @@
                 <!-- Filter Bar -->
                 <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex flex-wrap gap-4 items-end">
                     <div class="flex-1 min-w-[200px]">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Search & Sort</label>
-                                                    <select id="lecture-sort" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Search Lectures</label>
+                        <input type="text" id="lecture-search" placeholder="Search title or topics..." class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Sort</label>
+                        <select id="lecture-sort" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500">
                                                         <option value="date-desc">Date (Newest First)</option>
                                                         <option value="date-asc">Date (Oldest First)</option>
                                                         <option value="title-asc">Title (A-Z)</option>
@@ -219,13 +223,15 @@
     <!-- Modals -->
     <div id="topic-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
-            <h3 class="text-2xl font-bold mb-6 text-slate-800">New Master Topic</h3>
+            <h3 id="topic-modal-title" class="text-2xl font-bold mb-6 text-slate-800">New Master Topic</h3>
             <form id="add-topic-form" class="space-y-4">
+                <input type="hidden" id="topic-edit-id">
                 <input type="text" id="topic-name" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Topic Name">
                 <input type="text" id="topic-subject" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Subject (e.g. Renal)">
+                <input type="text" id="topic-tags" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tags (e.g. #high-yield, #step1)">
                 <div class="flex gap-3">
                     <button type="button" id="cancel-topic-modal" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
-                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
+                    <button type="submit" id="topic-submit-btn" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Save</button>
                 </div>
             </form>
         </div>
@@ -408,26 +414,137 @@
         }
     }
 
-    // --- Block Management ---
+    // --- UI Helpers ---
 
+    function toggleModal(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        
+        const willShow = el.classList.contains('hidden');
+        el.classList.toggle('hidden');
+        
+        if (willShow) {
+            // Initialization logic when OPENING
+            if (id === 'topic-modal') {
+                const editId = document.getElementById('topic-edit-id').value;
+                if (!editId) {
+                    document.getElementById('topic-modal-title').innerText = "New Master Topic";
+                    document.getElementById('topic-submit-btn').innerText = "Save";
+                }
+            }
+            if (id === 'lecture-modal') {
+                const editId = document.getElementById('lecture-edit-id').value;
+                if (!editId) {
+                    document.getElementById('lecture-modal-title').innerText = "Add Lecture";
+                    document.getElementById('lecture-submit-btn').innerText = "Save Lecture";
+                    document.getElementById('lecture-date').value = new Date().toISOString().split('T')[0];
+                    populateTopicSelectors(); 
+                }
+            }
+            if (id === 'pass-modal') {
+                const editId = document.getElementById('pass-edit-id').value;
+                if (!editId) {
+                    document.getElementById('pass-modal-title').innerText = "Log Pass";
+                    document.getElementById('pass-submit-btn').innerText = "Log Pass";
+                    document.getElementById('pass-date').value = new Date().toISOString().split('T')[0];
+                    populatePassTopicDropdown();
+                }
+            }
+            if (id === 'goal-modal') {
+                const block = getActiveBlock();
+                document.getElementById('goal-mh-target').value = block.masteryGoal || "";
+            }
+        } else {
+            // Cleanup logic when CLOSING
+            const form = el.querySelector('form');
+            if (form) form.reset();
+            const hiddenIds = el.querySelectorAll('input[type="hidden"]');
+            hiddenIds.forEach(hi => hi.value = "");
+        }
+    }
+
+    function openAddTopic() {
+        toggleModal('topic-modal');
+    }
+
+    function openEditTopic(id) {
+        const topic = state.topics.find(t => t.id === id);
+        if (!topic) return;
+        document.getElementById('topic-edit-id').value = topic.id;
+        document.getElementById('topic-modal-title').innerText = "Edit Topic";
+        document.getElementById('topic-submit-btn').innerText = "Save Changes";
+        document.getElementById('topic-name').value = topic.name;
+        document.getElementById('topic-subject').value = topic.subject;
+        document.getElementById('topic-tags').value = (topic.tags || []).join(', ');
+        toggleModal('topic-modal');
+    }
+
+    function openAddLecture() {
+        toggleModal('lecture-modal');
+    }
+
+    function openEditLecture(id) {
+        const l = state.lectures.find(x => x.id === id);
+        if(!l) return;
+        document.getElementById('lecture-edit-id').value = l.id;
+        document.getElementById('lecture-modal-title').innerText = "Edit Lecture";
+        document.getElementById('lecture-submit-btn').innerText = "Save Changes";
+        document.getElementById('lecture-title').value = l.title;
+        document.getElementById('lecture-date').value = l.date;
+        populateTopicSelectors();
+        toggleModal('lecture-modal');
+        setTimeout(() => {
+            document.querySelectorAll('.topic-check').forEach(cb => { cb.checked = l.topics.includes(cb.value); });
+        }, 10);
+    }
+
+    function openLogPass() {
+        toggleModal('pass-modal');
+    }
+
+    function openEditPass(id) {
+        const p = state.passes.find(x => x.id === id);
+        if(!p) return;
+        document.getElementById('pass-edit-id').value = p.id;
+        document.getElementById('pass-modal-title').innerText = "Edit Pass";
+        document.getElementById('pass-submit-btn').innerText = "Save Changes";
+        populatePassTopicDropdown();
+        setTimeout(() => {
+            document.getElementById('pass-topic-id').value = p.topicId;
+        }, 0);
+        document.getElementById('pass-date').value = p.date;
+        document.getElementById('pass-sp3').value = p.sp3;
+        document.getElementById('pass-quiz').value = p.quiz;
+        document.getElementById('pass-note').value = p.note || "";
+        toggleModal('pass-modal');
+    }
+
+    function openSetGoal() {
+        toggleModal('goal-modal');
+    }
+
+    function openAddBlock() {
+        toggleModal('block-modal');
+    }
+
+    // Updated Handlers to use toggleModal
     function handleBlockChange(e) {
         const val = e.target.value;
         if (val === 'new_block_action') {
             toggleModal('block-modal');
-            e.target.value = state.activeBlockId; // Reset to current
+            e.target.value = state.activeBlockId; 
         } else {
             state.activeBlockId = val;
-            save(); // Save active state
+            save(); 
         }
     }
 
-    function handleBlockSubmit(e) {
+function handleBlockSubmit(e) {
         e.preventDefault();
         const name = document.getElementById('block-name').value;
         const newId = 'b-' + Date.now();
         state.blocks.push({ id: newId, name: name, masteryGoal: 0 });
         state.activeBlockId = newId;
-        e.target.reset();
         toggleModal('block-modal');
         save();
     }
@@ -443,27 +560,31 @@
     }
 
     // --- Topic Operations ---
-
-    function addTopic(e) {
+    function handleTopicSubmit(e) {
         e.preventDefault();
-        state.topics.push({ 
-            id: 't'+Date.now(), 
-            blockId: state.activeBlockId,
-            name: document.getElementById('topic-name').value, 
-            subject: document.getElementById('topic-subject').value 
-        });
-        e.target.reset(); toggleModal('topic-modal'); save();
-    }
+        const editId = document.getElementById('topic-edit-id').value;
+        const name = document.getElementById('topic-name').value;
+        const subject = document.getElementById('topic-subject').value;
+        const tagsRaw = document.getElementById('topic-tags').value;
+        const tags = tagsRaw.split(',').map(t => t.trim()).filter(t => t !== "");
 
-    function deleteTopic(id) { 
-        if(confirm("Delete topic and its history?")) { 
-            state.topics = state.topics.filter(t => t.id !== id); 
-            state.passes = state.passes.filter(p => p.topicId !== id); 
-            save(); 
-        } 
+        if (editId) {
+            const index = state.topics.findIndex(t => t.id === editId);
+            if (index !== -1) {
+                state.topics[index] = { ...state.topics[index], name, subject, tags };
+            }
+        } else {
+            state.topics.push({ 
+                id: 't'+Date.now(), 
+                blockId: state.activeBlockId,
+                name, 
+                subject,
+                tags
+            });
+        }
+        toggleModal('topic-modal');
+        save();
     }
-
-    // --- Lecture Operations ---
 
     function handleLectureSubmit(e) {
         e.preventDefault();
@@ -485,39 +606,9 @@
                 ingested: false 
             });
         }
-        document.getElementById('lecture-edit-id').value = "";
-        toggleModal('lecture-modal'); save();
+        toggleModal('lecture-modal'); 
+        save();
     }
-
-    function toggleIngested(lectureId) {
-        const lecture = state.lectures.find(l => l.id === lectureId);
-        if (lecture) {
-            lecture.ingested = !lecture.ingested;
-            save();
-        }
-    }
-
-    function deleteLecture(id) { 
-        if(confirm("Delete lecture?")) { 
-            state.lectures = state.lectures.filter(l => l.id !== id); 
-            save(); 
-        } 
-    }
-
-    function openEditLecture(id) {
-        const lecture = state.lectures.find(l => l.id === id);
-        if (!lecture) return;
-        document.getElementById('lecture-edit-id').value = lecture.id;
-        document.getElementById('lecture-modal-title').innerText = "Edit Lecture";
-        toggleModal('lecture-modal');
-        document.getElementById('lecture-title').value = lecture.title;
-        document.getElementById('lecture-date').value = lecture.date;
-        setTimeout(() => {
-            document.querySelectorAll('.topic-check').forEach(cb => { cb.checked = lecture.topics.includes(cb.value); });
-        }, 10);
-    }
-
-    // --- Pass Operations ---
 
     function handlePassSubmit(e) {
         e.preventDefault();
@@ -532,66 +623,16 @@
             const index = state.passes.findIndex(p => p.id === editId);
             if (index !== -1) state.passes[index] = { ...state.passes[index], topicId, sp3, quiz, date, note };
         } else state.passes.push({ id: 'p'+Date.now(), topicId, sp3, quiz, date, note });
-        document.getElementById('pass-edit-id').value = "";
-        toggleModal('pass-modal'); save();
-    }
-
-    function openEditPass(id) {
-        const pass = state.passes.find(p => p.id === id);
-        if (!pass) return;
-        document.getElementById('pass-edit-id').value = pass.id;
-        toggleModal('pass-modal');
-        document.getElementById('pass-topic-id').value = pass.topicId;
-        document.getElementById('pass-date').value = pass.date;
-        document.getElementById('pass-sp3').value = pass.sp3;
-        document.getElementById('pass-quiz').value = pass.quiz;
-        document.getElementById('pass-note').value = pass.note || "";
-    }
-
-    function deletePass(id) { 
-        if(confirm("Permanently delete this pass?")) { 
-            state.passes = state.passes.filter(p => p.id !== id); 
-            save(); 
-        } 
+        toggleModal('pass-modal'); 
+        save();
     }
 
     function handleGoalSubmit(e) {
         e.preventDefault();
         const block = getActiveBlock();
         block.masteryGoal = parseFloat(document.getElementById('goal-mh-target').value);
-        toggleModal('goal-modal'); save();
-    }
-
-    // --- UI Helpers ---
-
-    function toggleModal(id) {
-        document.getElementById(id).classList.toggle('hidden');
-        if (id === 'lecture-modal') {
-            const editId = document.getElementById('lecture-edit-id').value;
-            if (!editId) {
-                document.getElementById('lecture-modal-title').innerText = "Add Lecture";
-                document.getElementById('lecture-submit-btn').innerText = "Save Lecture";
-                document.getElementById('lecture-title').value = "";
-                document.getElementById('lecture-date').value = new Date().toISOString().split('T')[0];
-            }
-            populateTopicSelectors(); 
-        }
-        if (id === 'pass-modal') {
-            const editId = document.getElementById('pass-edit-id').value;
-            if (!editId) {
-                document.getElementById('pass-modal-title').innerText = "Log Pass";
-                document.getElementById('pass-submit-btn').innerText = "Log Pass";
-                document.getElementById('pass-date').value = new Date().toISOString().split('T')[0];
-                document.getElementById('pass-sp3').value = "";
-                document.getElementById('pass-quiz').value = "";
-                document.getElementById('pass-note').value = "";
-            }
-            populatePassTopicDropdown();
-        }
-        if (id === 'goal-modal') {
-            const block = getActiveBlock();
-            document.getElementById('goal-mh-target').value = block.masteryGoal || "";
-        }
+        toggleModal('goal-modal'); 
+        save();
     }
 
     function switchView(viewId) {
@@ -629,6 +670,7 @@
     }
 
     function resetLectureFilters() {
+        document.getElementById('lecture-search').value = "";
         document.getElementById('lecture-sort').value = "date-desc";
         document.getElementById('lecture-topic-filter').value = "all";
         document.getElementById('lecture-start-date').value = "";
@@ -645,6 +687,12 @@
         const activeTopics = isAllBlocks ? state.topics : state.topics.filter(t => t.blockId === state.activeBlockId);
         const activeLectures = isAllBlocks ? state.lectures : state.lectures.filter(l => l.blockId === state.activeBlockId);
         
+        // Helper for badges
+        const getBadgeHtml = (stats) => {
+            let colorClass = parseFloat(stats.mi) >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700';
+            return `<span class="px-3 py-1 rounded-full text-xs font-bold ${colorClass}">${stats.mi}</span>`;
+        };
+
         // Update Block Selector
         const selector = document.getElementById('block-selector');
         if (selector) {
@@ -700,10 +748,16 @@
                 
                 const rows = sorted.map(t => {
                     const stats = getTopicStats(t.id);
+                    const tagHtml = (t.tags || []).map(tag => `<span class="ml-2 text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-mono">${tag}</span>`).join('');
                     return `<tr>
-                        <td class="px-6 py-4 font-bold text-slate-800 pl-10">${t.name}</td>
-                        <td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${stats.mi}</span></td>
-                        <td class="text-right px-6"><button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors">×</button></td>
+                        <td class="px-6 py-4 font-bold text-slate-800 pl-10">
+                            ${t.name}${tagHtml}
+                        </td>
+                        <td class="text-center">${getBadgeHtml(stats)}</td>
+                        <td class="text-right px-6 space-x-2">
+                            <button data-id="${t.id}" class="edit-topic-btn text-indigo-300 hover:text-indigo-600 transition-colors text-[10px] font-bold uppercase">Edit</button>
+                            <button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors text-lg">×</button>
+                        </td>
                     </tr>`;
                 }).join('');
 
@@ -726,8 +780,11 @@
                         const stats = getTopicStats(t.id);
                         return `<tr>
                             <td class="px-6 py-4 font-bold text-slate-800 pl-10">${t.name}</td>
-                            <td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${stats.mi}</span></td>
-                            <td class="text-right px-6"><button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors">×</button></td>
+                            <td class="text-center">${getBadgeHtml(stats)}</td>
+                            <td class="text-right px-6 space-x-2">
+                                <button data-id="${t.id}" class="edit-topic-btn text-indigo-300 hover:text-indigo-600 transition-colors text-[10px] font-bold uppercase">Edit</button>
+                                <button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors text-lg">×</button>
+                            </td>
                         </tr>`;
                     }).join('');
             }
@@ -739,7 +796,17 @@
             const sortedTopics = [...activeTopics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
             topicBody.innerHTML = sortedTopics.map(t => {
                 const stats = getTopicStats(t.id);
-                return `<tr><td class="px-6 py-4 font-bold text-slate-800">${t.name}</td><td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${stats.mi}</span></td><td class="text-right px-6"><button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors">×</button></td></tr>`;
+                const tagHtml = (t.tags || []).map(tag => `<span class="ml-2 text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-mono">${tag}</span>`).join('');
+                return `<tr>
+                    <td class="px-6 py-4 font-bold text-slate-800">
+                        ${t.name}${tagHtml}
+                    </td>
+                    <td class="text-center">${getBadgeHtml(stats)}</td>
+                    <td class="text-right px-6 space-x-2">
+                        <button data-id="${t.id}" class="edit-topic-btn text-indigo-300 hover:text-indigo-600 transition-colors text-[10px] font-bold uppercase">Edit</button>
+                        <button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors text-lg">×</button>
+                    </td>
+                </tr>`;
             }).join('');
         }
 
@@ -776,7 +843,21 @@
         topicFilter.value = filterVal; // Restore selection if valid
 
         const sortMode = document.getElementById('lecture-sort').value;
+        const searchQuery = document.getElementById('lecture-search').value.toLowerCase();
+        
         let filteredLectures = [...activeLectures];
+        
+        // Search Filter
+        if (searchQuery) {
+            filteredLectures = filteredLectures.filter(l => {
+                const inTitle = l.title.toLowerCase().includes(searchQuery);
+                const relatedTopics = l.topics.map(tid => state.topics.find(t => t.id === tid)).filter(Boolean);
+                const inTopics = relatedTopics.some(t => t.name.toLowerCase().includes(searchQuery));
+                const inTags = relatedTopics.some(t => (t.tags || []).some(tag => tag.toLowerCase().includes(searchQuery)));
+                return inTitle || inTopics || inTags;
+            });
+        }
+
         if (topicFilter.value !== 'all' && topicFilter.value !== '') filteredLectures = filteredLectures.filter(l => l.topics.includes(topicFilter.value));
         if (document.getElementById('lecture-start-date').value) filteredLectures = filteredLectures.filter(l => l.date >= document.getElementById('lecture-start-date').value);
         if (document.getElementById('lecture-end-date').value) filteredLectures = filteredLectures.filter(l => l.date <= document.getElementById('lecture-end-date').value);
@@ -854,6 +935,8 @@
         document.getElementById('topic-list-body').addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-topic-btn')) {
                 deleteTopic(e.target.dataset.id);
+            } else if (e.target.classList.contains('edit-topic-btn')) {
+                openEditTopic(e.target.dataset.id);
             }
         });
 
@@ -866,6 +949,7 @@
 
         // Lectures delegation
         document.getElementById('add-lecture-btn').addEventListener('click', () => toggleModal('lecture-modal'));
+        document.getElementById('lecture-search').addEventListener('input', render);
         document.getElementById('lecture-sort').addEventListener('change', render);
         document.getElementById('lecture-topic-filter').addEventListener('change', render);
         document.getElementById('lecture-start-date').addEventListener('change', render);
@@ -890,7 +974,7 @@
         });
 
         // Forms
-        document.getElementById('add-topic-form').addEventListener('submit', addTopic);
+        document.getElementById('add-topic-form').addEventListener('submit', handleTopicSubmit);
         document.getElementById('add-edit-lecture-form').addEventListener('submit', handleLectureSubmit);
         document.getElementById('add-edit-pass-form').addEventListener('submit', handlePassSubmit);
         document.getElementById('set-goal-form').addEventListener('submit', handleGoalSubmit);
