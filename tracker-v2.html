@@ -639,17 +639,27 @@
     // --- Core Rendering ---
 
     function render() {
-        const activeBlock = getActiveBlock();
-        const activeTopics = state.topics.filter(t => t.blockId === state.activeBlockId);
-        const activeLectures = state.lectures.filter(l => l.blockId === state.activeBlockId);
+        const isAllBlocks = state.activeBlockId === 'all';
+        const activeBlock = isAllBlocks ? null : getActiveBlock();
+        
+        const activeTopics = isAllBlocks ? state.topics : state.topics.filter(t => t.blockId === state.activeBlockId);
+        const activeLectures = isAllBlocks ? state.lectures : state.lectures.filter(l => l.blockId === state.activeBlockId);
         
         // Update Block Selector
         const selector = document.getElementById('block-selector');
         if (selector) {
-            selector.innerHTML = state.blocks.map(b => 
-                `<option value="${b.id}" ${b.id === state.activeBlockId ? 'selected' : ''}>${b.name}</option>`
-            ).join('') + '<option value="new_block_action" class="font-bold text-indigo-600">+ New Block...</option>';
+            selector.innerHTML = 
+                `<option value="all" ${isAllBlocks ? 'selected' : ''}>All Blocks (Longitudinal)</option>` +
+                state.blocks.map(b => `<option value="${b.id}" ${b.id === state.activeBlockId ? 'selected' : ''}>${b.name}</option>`).join('') + 
+                '<option value="new_block_action" class="font-bold text-indigo-600">+ New Block...</option>';
         }
+
+        // Toggle UI Elements based on View Mode
+        const addBtns = ['add-topic-btn', 'add-lecture-btn', 'log-new-pass-btn', 'set-goal-btn', 'rename-block-btn'];
+        addBtns.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) isAllBlocks ? el.classList.add('hidden') : el.classList.remove('hidden');
+        });
 
         // Stats
         const mh = calculateMh(activeTopics);
@@ -660,31 +670,87 @@
         const progressPercent = document.getElementById('goal-percent');
         const statusText = document.getElementById('goal-status-text');
 
-        if (activeBlock.masteryGoal > 0) {
+        if (!isAllBlocks && activeBlock.masteryGoal > 0) {
             targetDisplay.innerText = `/ ${activeBlock.masteryGoal}`;
             progressContainer.classList.remove('hidden');
             const percent = Math.min(100, Math.round((mh / activeBlock.masteryGoal) * 100));
             progressBar.style.width = `${percent}%`;
             progressPercent.innerText = `${percent}%`;
             statusText.innerText = percent >= 100 ? "Goal Met." : `${(activeBlock.masteryGoal - mh).toFixed(2)} points to go.`;
-        } else { targetDisplay.innerText = ""; progressContainer.classList.add('hidden'); }
+        } else { 
+            targetDisplay.innerText = isAllBlocks ? "(Global)" : ""; 
+            progressContainer.classList.add('hidden'); 
+        }
 
         const ingestedCount = activeLectures.filter(l => l.ingested).length;
         document.getElementById('ingestion-count').innerText = `${ingestedCount} / ${activeLectures.length}`;
         document.getElementById('mastered-count').innerText = `${activeTopics.filter(t => getTopicStats(t.id).mi >= 7).length} / ${activeTopics.length}`;
 
-        // Topics
-        const sortedTopics = [...activeTopics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
-        const priority = document.getElementById('priority-topic');
-        if (sortedTopics.length > 0) {
-            const top = sortedTopics[0]; const stats = getTopicStats(top.id);
-            priority.innerHTML = `<div class="flex justify-between font-bold text-sm"><span>${top.name}</span><span>Mi: ${stats.mi}</span></div>`;
-        } else priority.innerHTML = `<p class="text-xs opacity-50 italic">No topics</p>`;
+        // Topics Rendering
+        const topicBody = document.getElementById('topic-list-body');
+        
+        if (isAllBlocks) {
+            // Grouped Rendering for All Blocks
+            const groupedHtml = state.blocks.map(block => {
+                const blockTopics = activeTopics.filter(t => t.blockId === block.id);
+                if (blockTopics.length === 0) return '';
+                
+                // Sort by Mi inside the block
+                const sorted = blockTopics.sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
+                
+                const rows = sorted.map(t => {
+                    const stats = getTopicStats(t.id);
+                    return `<tr>
+                        <td class="px-6 py-4 font-bold text-slate-800 pl-10">${t.name}</td>
+                        <td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${stats.mi}</span></td>
+                        <td class="text-right px-6"><button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors">×</button></td>
+                    </tr>`;
+                }).join('');
 
-        document.getElementById('topic-list-body').innerHTML = sortedTopics.map(t => {
-            const stats = getTopicStats(t.id);
-            return `<tr><td class="px-6 py-4 font-bold text-slate-800">${t.name}</td><td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${stats.mi}</span></td><td class="text-right px-6"><button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors">×</button></td></tr>`;
-        }).join('');
+                return `
+                    <tr class="bg-slate-100/80 border-y border-slate-200">
+                        <td colspan="3" class="px-6 py-2 text-xs font-bold text-slate-500 uppercase tracking-widest">${block.name}</td>
+                    </tr>
+                    ${rows}
+                `;
+            }).join('');
+            
+            // Handle Orphaned Topics (deleted blocks)
+            const orphaned = activeTopics.filter(t => !state.blocks.find(b => b.id === t.blockId));
+            let orphanedHtml = '';
+            if (orphaned.length > 0) {
+                 orphanedHtml = `
+                    <tr class="bg-red-50 border-y border-red-100">
+                        <td colspan="3" class="px-6 py-2 text-xs font-bold text-red-500 uppercase tracking-widest">Unassigned / Orphaned</td>
+                    </tr>` + orphaned.map(t => {
+                        const stats = getTopicStats(t.id);
+                        return `<tr>
+                            <td class="px-6 py-4 font-bold text-slate-800 pl-10">${t.name}</td>
+                            <td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${stats.mi}</span></td>
+                            <td class="text-right px-6"><button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors">×</button></td>
+                        </tr>`;
+                    }).join('');
+            }
+
+            topicBody.innerHTML = groupedHtml + orphanedHtml || '<tr><td colspan="3" class="text-center py-8 text-slate-400 italic">No topics found.</td></tr>';
+
+        } else {
+            // Standard Single Block Rendering
+            const sortedTopics = [...activeTopics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
+            topicBody.innerHTML = sortedTopics.map(t => {
+                const stats = getTopicStats(t.id);
+                return `<tr><td class="px-6 py-4 font-bold text-slate-800">${t.name}</td><td class="text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${stats.mi >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100'}">${stats.mi}</span></td><td class="text-right px-6"><button data-id="${t.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors">×</button></td></tr>`;
+            }).join('');
+        }
+
+        // Priority Topic (Global or Local)
+        // For global, we still want the LOWEST Mi topic overall
+        const allSorted = [...activeTopics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
+        const priority = document.getElementById('priority-topic');
+        if (allSorted.length > 0) {
+            const top = allSorted[0]; const stats = getTopicStats(top.id);
+            priority.innerHTML = `<div class="flex justify-between font-bold text-sm"><span>${top.name}</span><span>Mi: ${stats.mi}</span></div>`;
+        } else priority.innerHTML = `<p class="text-xs opacity-50 italic">No data</p>`;
 
         // Checklist
         const checklistBody = document.getElementById('checklist-body');
@@ -701,7 +767,7 @@
                 <td class="px-6 py-4">${topicBadges}</td>
                 <td class="px-6 py-4 text-right text-xs text-slate-400 font-mono">${l.date}</td>
             </tr>`;
-        }).join('') || '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">No lectures in this block.</td></tr>';
+        }).join('') || '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">No lectures found.</td></tr>';
 
         // Lecture Grid
         const topicFilter = document.getElementById('lecture-topic-filter');
@@ -740,10 +806,10 @@
                     return t ? `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${t.name}</span>` : '';
                 }).join('')}</div>
             </div>
-        `).join('') || '<p class="text-slate-400 text-center col-span-full py-10 italic">No matching lectures.</p>';
+        `).join('') || '<p class="text-slate-400 text-center col-span-full py-10 italic">No matching lectures found.</p>';
 
         // History
-        // Filter history by passes that belong to topics in the active block
+        // Filter history by passes that belong to topics in the active block (or all if all)
         const activeTopicIds = new Set(activeTopics.map(t => t.id));
         const activePasses = state.passes.filter(p => activeTopicIds.has(p.topicId));
 
@@ -759,7 +825,7 @@
                     <button data-id="${p.id}" class="delete-pass-btn text-red-200 hover:text-red-500 text-[10px] font-bold uppercase">Del</button>
                 </td>
             </tr>
-        `).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No history for this block.</td></tr>';
+        `).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No history available.</td></tr>';
     }
 
     function setupEventListeners() {
