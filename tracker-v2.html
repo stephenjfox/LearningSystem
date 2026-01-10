@@ -27,7 +27,7 @@
         }
 
         .guide-header {
-            background: var(--primary);
+            /* background: var(--primary); */
             color: white;
             padding: 1.5rem;
             text-align: center;
@@ -115,7 +115,7 @@
         }
 
         .step-number {
-            background: var(--primary);
+            /* background: var(--primary); */
             color: white;
             width: 24px;
             height: 24px;
@@ -370,6 +370,7 @@
                     </table>
                 </div>
             </section>
+            <!-- Walkthrough -->
             <section id="view-walkthrough" class="view hidden space-y-6">
                 <div class="system-guide-container">
                     
@@ -1284,7 +1285,7 @@ function handleBlockSubmit(e) {
         document.getElementById('cancel-block-modal').addEventListener('click', () => toggleModal('block-modal'));
     }
     // Timer  JS deps
-        // -- Timer Logic --
+    // -- Timer Logic --
     let timerInterval = null;
     let seconds = 0;
     let isRunning = false;
