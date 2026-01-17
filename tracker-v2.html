@@ -13,6 +13,14 @@
         .ingested-row { opacity: 0.5; filter: grayscale(1); }
         .ingested-text { text-decoration: line-through; color: #94a3b8; }
         input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
+
+        /* Mobile Modal Hack */
+        @media (max-width: 1000px) {
+            #bulk-pass-modal > div {
+                max-height: 90dvh !important;
+                height: 90dvh !important;
+            }
+        }
     </style>
     <style>
 
@@ -353,7 +361,11 @@
             <section id="view-history" class="view hidden space-y-6">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold">Pass History</h2>
-                                            <button id="log-new-pass-btn" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Log New Pass</button>                </div>
+                    <div class="flex gap-2">
+                        <button id="bulk-log-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Bulk Log</button>
+                        <button id="log-new-pass-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Log New Pass</button>
+                    </div>
+                </div>
                 <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-x-auto">
                     <table class="w-full text-left">
                         <thead class="bg-slate-50">
@@ -573,6 +585,63 @@
                     <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold">Create Block</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Bulk Log Modal -->
+    <div id="bulk-pass-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-3xl p-6 sm:p-8 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden transition-all">
+            <h3 class="text-2xl font-bold mb-4 text-slate-800 flex-shrink-0">Bulk Log Passes</h3>
+            
+            <!-- Step 1: Select Topics -->
+            <div id="bulk-step-1" class="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <p class="text-xs text-slate-500 mb-4 flex-shrink-0">Select the topics you studied in this session.</p>
+                <div class="flex items-center gap-4 mb-3 p-2 bg-slate-50 rounded-xl border border-slate-100 flex-shrink-0">
+                    <label class="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer select-none">
+                        <input type="checkbox" id="bulk-select-all" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
+                        Select All
+                    </label>
+                    <div class="h-6 w-px bg-slate-200"></div>
+                    <input type="text" id="bulk-search" placeholder="Filter topics..." class="flex-1 px-3 py-1.5 text-sm rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <span id="bulk-selection-count" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">0 selected</span>
+                </div>
+                <!-- Added min-h-0 and overflow-y-auto to this container explicitly -->
+                <div id="bulk-topic-list" class="flex-1 overflow-y-auto custom-scroll border border-slate-100 rounded-xl p-2 space-y-1 bg-slate-50/50 min-h-0"></div>
+                <div class="flex gap-3 pt-6 mt-auto flex-shrink-0">
+                    <button type="button" id="cancel-bulk-modal" class="px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button type="button" id="bulk-next-btn" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Next Step</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Enter Scores -->
+            <div id="bulk-step-2" class="hidden flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div class="flex gap-4 mb-4 flex-shrink-0">
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Pass Date</label>
+                        <input type="date" id="bulk-date" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <!-- Added min-h-0 and overflow-y-auto to this container explicitly -->
+                <div class="flex-1 overflow-y-auto custom-scroll border border-slate-100 rounded-xl bg-slate-50/50 min-h-0">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase border-b border-slate-200">Topic</th>
+                                <th class="px-2 py-3 text-xs font-bold text-slate-500 uppercase w-24 text-center border-b border-slate-200">Sp3 (0-10)</th>
+                                <th class="px-2 py-3 text-xs font-bold text-slate-500 uppercase w-24 text-center border-b border-slate-200">Quiz (0-10)</th>
+                                <th class="px-2 py-3 text-xs font-bold text-slate-500 uppercase border-b border-slate-200">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bulk-input-list" class="divide-y divide-slate-100 bg-white"></tbody>
+                    </table>
+                </div>
+                <div class="flex gap-3 pt-6 mt-auto flex-shrink-0">
+                    <button type="button" id="bulk-back-btn" class="px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">Back</button>
+                    <button type="button" id="bulk-submit-btn" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors">Save All Passes</button>
+                </div>
+            </div>
+        </div>
+    </div>
         </div>
     </div>
 <script>
@@ -822,6 +891,162 @@
 
     function openAddBlock() {
         toggleModal('block-modal');
+    }
+
+    // --- Bulk Log Logic ---
+    let bulkSelected = new Set();
+
+    function openBulkLog() {
+        bulkSelected.clear();
+        document.getElementById('bulk-select-all').checked = false;
+        document.getElementById('bulk-search').value = '';
+        document.getElementById('bulk-date').value = new Date().toISOString().split('T')[0];
+        
+        renderBulkTopicList();
+        
+        // Show Step 1, Hide Step 2
+        document.getElementById('bulk-step-1').classList.remove('hidden');
+        document.getElementById('bulk-step-2').classList.add('hidden');
+        
+        // Toggle Modal
+        const el = document.getElementById('bulk-pass-modal');
+        el.classList.remove('hidden');
+    }
+
+    function renderBulkTopicList() {
+        const isAll = state.activeBlockId === 'all';
+        let topics = isAll ? state.topics : state.topics.filter(t => t.blockId === state.activeBlockId);
+        
+        const search = document.getElementById('bulk-search').value.toLowerCase();
+        if (search) {
+            topics = topics.filter(t => t.name.toLowerCase().includes(search) || (t.tags||[]).some(tag => tag.toLowerCase().includes(search)));
+        }
+        
+        // Sort A-Z
+        topics.sort((a,b) => a.name.localeCompare(b.name));
+
+        const container = document.getElementById('bulk-topic-list');
+        if (topics.length === 0) {
+            container.innerHTML = '<p class="text-center text-slate-400 py-8 italic">No topics found.</p>';
+            return;
+        }
+
+        container.innerHTML = topics.map(t => {
+            const isChecked = bulkSelected.has(t.id);
+            return `
+                <div class="flex items-center p-2 rounded-lg hover:bg-white border border-transparent hover:border-slate-200 transition-all cursor-pointer" onclick="toggleBulkTopic('${t.id}')">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} class="w-5 h-5 text-indigo-600 rounded border-slate-300 pointer-events-none">
+                    <div class="ml-3">
+                        <p class="text-sm font-bold text-slate-700">${t.name}</p>
+                        <p class="text-[10px] text-slate-400 font-mono">${(t.tags||[]).join(', ')}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        updateBulkCount();
+    }
+
+    function toggleBulkTopic(id) {
+        if (bulkSelected.has(id)) bulkSelected.delete(id);
+        else bulkSelected.add(id);
+        renderBulkTopicList(); 
+    }
+
+    function toggleBulkAll() {
+        const isChecked = document.getElementById('bulk-select-all').checked;
+        const isAll = state.activeBlockId === 'all';
+        let topics = isAll ? state.topics : state.topics.filter(t => t.blockId === state.activeBlockId);
+        
+        const search = document.getElementById('bulk-search').value.toLowerCase();
+        if (search) {
+            topics = topics.filter(t => t.name.toLowerCase().includes(search));
+        }
+
+        if (isChecked) {
+            topics.forEach(t => bulkSelected.add(t.id));
+        } else {
+            topics.forEach(t => bulkSelected.delete(t.id));
+        }
+        renderBulkTopicList();
+    }
+
+    function updateBulkCount() {
+        const countEl = document.getElementById('bulk-selection-count');
+        countEl.innerText = `${bulkSelected.size} selected`;
+        document.getElementById('bulk-next-btn').disabled = bulkSelected.size === 0;
+    }
+
+    function handleBulkNext() {
+        if (bulkSelected.size === 0) return;
+
+        const tbody = document.getElementById('bulk-input-list');
+        const relevantTopics = state.topics.filter(t => bulkSelected.has(t.id)).sort((a,b) => a.name.localeCompare(b.name));
+        
+        tbody.innerHTML = relevantTopics.map(t => `
+            <tr class="hover:bg-slate-50 group">
+                <td class="px-4 py-3 border-b border-slate-50">
+                    <p class="text-sm font-bold text-slate-700">${t.name}</p>
+                </td>
+                <td class="px-2 py-3 border-b border-slate-50 text-center">
+                    <input type="number" min="0" max="10" step="0.1" data-id="${t.id}" data-field="sp3" class="w-full px-2 py-1.5 text-center text-sm font-bold rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 bg-white" placeholder="-">
+                </td>
+                <td class="px-2 py-3 border-b border-slate-50 text-center">
+                    <input type="number" min="0" max="10" step="0.1" data-id="${t.id}" data-field="quiz" class="w-full px-2 py-1.5 text-center text-sm font-bold rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 bg-white" placeholder="-">
+                </td>
+                <td class="px-2 py-3 border-b border-slate-50">
+                    <input type="text" data-id="${t.id}" data-field="note" class="w-full px-2 py-1.5 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 bg-white" placeholder="Note...">
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById('bulk-step-1').classList.add('hidden');
+        document.getElementById('bulk-step-2').classList.remove('hidden');
+    }
+
+    function handleBulkBack() {
+        document.getElementById('bulk-step-2').classList.add('hidden');
+        document.getElementById('bulk-step-1').classList.remove('hidden');
+    }
+
+    function handleBulkSubmit() {
+        const date = document.getElementById('bulk-date').value;
+        const inputs = document.querySelectorAll('#bulk-input-list input');
+        const data = {}; // { topicId: { sp3, quiz, note } }
+
+        inputs.forEach(input => {
+            const id = input.dataset.id;
+            const field = input.dataset.field;
+            if (!data[id]) data[id] = {};
+            data[id][field] = input.value;
+        });
+
+        let count = 0;
+        Object.keys(data).forEach(topicId => {
+            const entry = data[topicId];
+            // Only save if at least one score is entered
+            if (entry.sp3 !== "" || entry.quiz !== "") {
+                const sp3 = entry.sp3 === "" ? 0 : parseFloat(entry.sp3);
+                const quiz = entry.quiz === "" ? 0 : parseFloat(entry.quiz);
+                state.passes.push({
+                    id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    topicId: topicId,
+                    sp3: sp3,
+                    quiz: quiz,
+                    date: date,
+                    note: entry.note || ""
+                });
+                count++;
+            }
+        });
+
+        if (count > 0) {
+            save();
+            document.getElementById('bulk-pass-modal').classList.add('hidden');
+            // Flash success?
+        } else {
+            alert("Please enter at least one score.");
+        }
     }
 
     // Updated Handlers to use toggleModal
@@ -1107,14 +1332,39 @@ function handleBlockSubmit(e) {
             }).join('');
         }
 
-        // Priority Topic (Global or Local)
-        // For global, we still want the LOWEST Mi topic overall
-        const allSorted = [...activeTopics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
+        // Priority Topics by Subject
         const priority = document.getElementById('priority-topic');
-        if (allSorted.length > 0) {
-            const top = allSorted[0]; const stats = getTopicStats(top.id);
-            priority.innerHTML = `<div class="flex justify-between font-bold text-sm"><span>${top.name}</span><span>Mi: ${stats.mi}</span></div>`;
-        } else priority.innerHTML = `<p class="text-xs opacity-50 italic">No data</p>`;
+        if (activeTopics.length === 0) {
+            priority.innerHTML = `<p class="text-xs opacity-50 italic">No data</p>`;
+        } else {
+            const bestPerSubject = {};
+            activeTopics.forEach(t => {
+                const sub = (t.subject || 'General').trim();
+                const stats = getTopicStats(t.id);
+                const mi = parseFloat(stats.mi);
+                
+                // Find lowest Mi for this subject
+                if (!bestPerSubject[sub] || mi < bestPerSubject[sub].mi) {
+                    bestPerSubject[sub] = { topic: t, mi: mi };
+                }
+            });
+
+            // Sort subjects by their lowest Mi (triage the weakest subjects first)
+            const priorities = Object.values(bestPerSubject).sort((a, b) => a.mi - b.mi);
+
+            priority.innerHTML = `<div class="space-y-2 max-h-[400px] overflow-y-auto custom-scroll -mr-1 pr-1">` + 
+                priorities.map(p => `
+                    <div class="bg-black/20 rounded-lg p-2.5 flex justify-between items-center group hover:bg-black/30 transition-colors">
+                        <div class="min-w-0 flex-1 mr-3">
+                            <p class="text-[9px] uppercase font-bold text-indigo-200 tracking-wider truncate mb-0.5">${p.topic.subject || 'General'}</p>
+                            <p class="text-xs font-bold text-white truncate group-hover:whitespace-normal leading-tight" title="${p.topic.name}">${p.topic.name}</p>
+                        </div>
+                        <div class="text-center">
+                            <span class="block text-sm font-bold ${p.mi < 7 ? 'text-red-300' : 'text-emerald-300'} leading-none">${p.mi.toFixed(1)}</span>
+                        </div>
+                    </div>
+                `).join('') + `</div>`;
+        }
 
         // Checklist
         const checklistBody = document.getElementById('checklist-body');
@@ -1283,6 +1533,18 @@ function handleBlockSubmit(e) {
         document.getElementById('cancel-pass-modal').addEventListener('click', () => toggleModal('pass-modal'));
         document.getElementById('cancel-goal-modal').addEventListener('click', () => toggleModal('goal-modal'));
         document.getElementById('cancel-block-modal').addEventListener('click', () => toggleModal('block-modal'));
+
+        // Bulk Log Events
+        const bulkLogBtn = document.getElementById('bulk-log-btn');
+        if (bulkLogBtn) bulkLogBtn.addEventListener('click', openBulkLog);
+        
+        document.getElementById('bulk-select-all').addEventListener('change', toggleBulkAll);
+        document.getElementById('bulk-search').addEventListener('input', renderBulkTopicList);
+        document.getElementById('bulk-next-btn').addEventListener('click', handleBulkNext);
+        document.getElementById('cancel-bulk-modal').addEventListener('click', () => document.getElementById('bulk-pass-modal').classList.add('hidden'));
+        
+        document.getElementById('bulk-back-btn').addEventListener('click', handleBulkBack);
+        document.getElementById('bulk-submit-btn').addEventListener('click', handleBulkSubmit);
     }
     // Timer  JS deps
     // -- Timer Logic --
