@@ -792,6 +792,12 @@
         }
     }
 
+    function getFormattedDatetimeNow() {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        const formatted = now.toISOString().slice(0, 16); // getting rid of seconds and milliseconds
+        return formatted;
+    }
     function toggleModal(id) {
         const el = document.getElementById(id);
         if (!el) return;
@@ -822,7 +828,7 @@
                 if (!editId) {
                     document.getElementById('pass-modal-title').innerText = "Log Pass";
                     document.getElementById('pass-submit-btn').innerText = "Log Pass";
-                    document.getElementById('pass-date').value = new Date().toISOString().split('.')[0];
+                    document.getElementById('pass-date').value = getFormattedDatetimeNow();
                     populatePassTopicDropdown();
                 }
             }
@@ -831,7 +837,7 @@
                 document.getElementById('goal-mh-target').value = block.masteryGoal || "";
             }
             if (id === 'log-lecture-modal') {
-                document.getElementById('log-lecture-date').value = new Date().toISOString().split('.')[0];
+                document.getElementById('log-lecture-date').value = getFormattedDatetimeNow();
                 populateLogLectureDropdown();
             }
         } else {
