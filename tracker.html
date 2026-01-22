@@ -173,9 +173,14 @@
         }
         .step-check:hover { opacity: 1; }
     </style>
+    <style>
+        /* Some of the classes that Gemini insists exists, but aren't a part of my inlined Tailwind */
+        .bg-blue-600 {
+            background-color: steelblue;
+        }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
-
 <div id="app" class="max-w-7xl mx-auto px-4 py-8 lg:px-8">
     <!-- Header & Global Stats -->
     <header class="mb-10">
@@ -363,6 +368,7 @@
                     <h2 class="text-xl font-bold">Pass History</h2>
                     <div class="flex gap-2">
                         <button id="bulk-log-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Bulk Log</button>
+                        <button id="log-lecture-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Log Lecture</button>
                         <button id="log-new-pass-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Log New Pass</button>
                     </div>
                 </div>
@@ -642,6 +648,32 @@
             </div>
         </div>
     </div>
+
+    <div id="log-lecture-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">Log Lecture</h3>
+            <p class="text-xs text-slate-500 mb-4">Log a pass for <strong>all topics</strong> associated with this lecture.</p>
+            <form id="log-lecture-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Select Lecture</label>
+                    <select id="log-lecture-id" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Pass Date</label>
+                    <input type="date" id="log-lecture-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="number" step="0.1" min="0" max="10" id="log-lecture-sp3" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sp3 (0-10)">
+                    <input type="number" step="0.1" min="0" max="10" id="log-lecture-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Quiz (0-10)">
+                </div>
+                <textarea id="log-lecture-note" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Note (applied to all)..."></textarea>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" id="cancel-log-lecture-modal" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold">Cancel</button>
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">Log All</button>
+                </div>
+            </form>
+        </div>
+    </div>
         </div>
     </div>
 <script>
@@ -798,6 +830,10 @@
                 const block = getActiveBlock();
                 document.getElementById('goal-mh-target').value = block.masteryGoal || "";
             }
+            if (id === 'log-lecture-modal') {
+                document.getElementById('log-lecture-date').value = new Date().toISOString().split('T')[0];
+                populateLogLectureDropdown();
+            }
         } else {
             // Cleanup logic when CLOSING
             const form = el.querySelector('form');
@@ -891,6 +927,63 @@
 
     function openAddBlock() {
         toggleModal('block-modal');
+    }
+
+    function openLogLecture() {
+        toggleModal('log-lecture-modal');
+    }
+
+    function populateLogLectureDropdown() {
+        const isAll = state.activeBlockId === 'all';
+        const lectures = isAll ? state.lectures : state.lectures.filter(l => l.blockId === state.activeBlockId);
+
+        // Sort by date desc
+        lectures.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        const el = document.getElementById('log-lecture-id');
+        if (lectures.length === 0) {
+            el.innerHTML = '<option value="" disabled selected>No lectures found</option>';
+        } else {
+            el.innerHTML = lectures.map(l => `<option value="${l.id}">${l.title} (${l.date})</option>`).join('');
+        }
+    }
+
+    function handleLogLectureSubmit(e) {
+        e.preventDefault();
+        const lectureId = document.getElementById('log-lecture-id').value;
+        const date = document.getElementById('log-lecture-date').value;
+        const sp3 = parseFloat(document.getElementById('log-lecture-sp3').value);
+        const quiz = parseFloat(document.getElementById('log-lecture-quiz').value);
+        const note = document.getElementById('log-lecture-note').value;
+
+        if (!lectureId) {
+            alert("Please select a lecture.");
+            return;
+        }
+
+        const lecture = state.lectures.find(l => l.id === lectureId);
+        if (!lecture) return;
+
+        if (lecture.topics.length === 0) {
+            alert("This lecture has no topics associated with it.");
+            return;
+        }
+
+        let count = 0;
+        lecture.topics.forEach(topicId => {
+            state.passes.push({
+                id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
+                topicId: topicId,
+                sp3: sp3,
+                quiz: quiz,
+                date: date,
+                note: note ? `[${lecture.title}] ${note}` : `[${lecture.title}]`
+            });
+            count++;
+        });
+
+        toggleModal('log-lecture-modal');
+        save();
     }
 
     // --- Bulk Log Logic ---
@@ -1526,6 +1619,7 @@ function handleBlockSubmit(e) {
         document.getElementById('add-edit-pass-form').addEventListener('submit', handlePassSubmit);
         document.getElementById('set-goal-form').addEventListener('submit', handleGoalSubmit);
         document.getElementById('add-block-form').addEventListener('submit', handleBlockSubmit);
+        document.getElementById('log-lecture-form').addEventListener('submit', handleLogLectureSubmit);
 
         // Cancel Buttons
         document.getElementById('cancel-topic-modal').addEventListener('click', () => toggleModal('topic-modal'));
@@ -1533,6 +1627,8 @@ function handleBlockSubmit(e) {
         document.getElementById('cancel-pass-modal').addEventListener('click', () => toggleModal('pass-modal'));
         document.getElementById('cancel-goal-modal').addEventListener('click', () => toggleModal('goal-modal'));
         document.getElementById('cancel-block-modal').addEventListener('click', () => toggleModal('block-modal'));
+        document.getElementById('cancel-log-lecture-modal').addEventListener('click', () => toggleModal('log-lecture-modal'));
+        document.getElementById('log-lecture-btn').addEventListener('click', openLogLecture);
 
         // Bulk Log Events
         const bulkLogBtn = document.getElementById('bulk-log-btn');
