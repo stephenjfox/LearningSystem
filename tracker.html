@@ -551,11 +551,11 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Pass Date</label>
-                    <input type="date" id="pass-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="datetime-local" id="pass-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="number" step="0.1" min="0" max="10" id="pass-sp3" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sp3 (0-10)">
-                    <input type="number" step="0.1" min="0" max="10" id="pass-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Quiz (0-10)">
+                    <input type="number" step="0.1" min="0" max="10" value="0" id="pass-sp3" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sp3 (0-10)">
+                    <input type="number" step="0.1" min="0" max="10" value="0" id="pass-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Quiz (0-10)">
                 </div>
                 <textarea id="pass-note" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sprint Notes..."></textarea>
                 <div class="flex gap-3 pt-2">
@@ -624,7 +624,7 @@
                 <div class="flex gap-4 mb-4 flex-shrink-0">
                     <div class="flex-1">
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Pass Date</label>
-                        <input type="date" id="bulk-date" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input type="datetime-local" id="bulk-date" class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                 </div>
                 <!-- Added min-h-0 and overflow-y-auto to this container explicitly -->
@@ -660,11 +660,11 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Pass Date</label>
-                    <input type="date" id="log-lecture-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="datetime-local" id="log-lecture-date" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="number" step="0.1" min="0" max="10" id="log-lecture-sp3" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sp3 (0-10)">
-                    <input type="number" step="0.1" min="0" max="10" id="log-lecture-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Quiz (0-10)">
+                    <input type="number" step="0.1" min="0" value="0" max="10" id="log-lecture-sp3" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sp3 (0-10)">
+                    <input type="number" step="0.1" min="0" value="0" max="10" id="log-lecture-quiz" required class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Quiz (0-10)">
                 </div>
                 <textarea id="log-lecture-note" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Note (applied to all)..."></textarea>
                 <div class="flex gap-3 pt-2">
@@ -822,7 +822,7 @@
                 if (!editId) {
                     document.getElementById('pass-modal-title').innerText = "Log Pass";
                     document.getElementById('pass-submit-btn').innerText = "Log Pass";
-                    document.getElementById('pass-date').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('pass-date').value = new Date().toISOString().split('.')[0];
                     populatePassTopicDropdown();
                 }
             }
@@ -831,7 +831,7 @@
                 document.getElementById('goal-mh-target').value = block.masteryGoal || "";
             }
             if (id === 'log-lecture-modal') {
-                document.getElementById('log-lecture-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('log-lecture-date').value = new Date().toISOString().split('.')[0];
                 populateLogLectureDropdown();
             }
         } else {
