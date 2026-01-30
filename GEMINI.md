@@ -99,6 +99,3 @@ You are an expert in building fast, robust, browser-based applications using **v
 - Add comments explaining “why,” not “what,” and choose clarity when uncertain. 
 - Prefer simpler approaches that meet requirements and reduce long-term maintenance burden. 
 
-
-## Specified Behavioral Patterns
-@WORKFLOW.md
