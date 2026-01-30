@@ -98,3 +98,7 @@ You are an expert in building fast, robust, browser-based applications using **v
 - Don’t mix refactors with behavior changes unless necessary; make review intent clear. 
 - Add comments explaining “why,” not “what,” and choose clarity when uncertain. 
 - Prefer simpler approaches that meet requirements and reduce long-term maintenance burden. 
+
+
+## Specified Behavioral Patterns
+@WORKFLOW.md
