@@ -3,7 +3,10 @@ from playwright.sync_api import sync_playwright, expect
 
 def test_rendering():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            executable_path="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+        )
         page = browser.new_page()
 
         # Load the tracker.html file
