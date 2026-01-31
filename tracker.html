@@ -893,6 +893,7 @@
                         <div class="timer-mode-switch flex justify-center gap-6 mb-6">
                             <span class="mode-btn selected text-xs font-bold tracking-widest uppercase cursor-pointer pb-1 border-b-2 border-transparent transition-all" onclick="setTimerMode('stopwatch')">Stopwatch</span>
                             <span class="mode-btn text-xs font-bold tracking-widest uppercase cursor-pointer pb-1 border-b-2 border-transparent transition-all" onclick="setTimerMode('pomodoro')">Pomodoro (25m)</span>
+                            <span class="mode-btn text-xs font-bold tracking-widest uppercase cursor-pointer pb-1 border-b-2 border-transparent transition-all" onclick="setTimerMode('sprint')">Mastery Sprint (60m)</span>
                         </div>
                         <div class="timer-display font-mono text-6xl font-bold mb-8 tabular-nums tracking-tighter" id="timerDisplay">00:00</div>
                         <div class="flex justify-center gap-4">
@@ -902,6 +903,23 @@
                     </div>
 
                     <div class="space-y-16">
+                        <!-- Mathematical Foundation -->
+                        <section>
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 pb-2 border-b border-slate-100">The Mathematical Foundation</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-white rounded-2xl p-6 border border-slate-100 card-shadow">
+                                    <h4 class="font-bold text-slate-800 text-lg mb-2">Mastery Optimization (MOF)</h4>
+                                    <p class="text-slate-600 text-sm mb-4">Objective: Maximize the <b>Harmonic Mean (Mh)</b> of your topic mastery scores. Unlike the average, Mh is punitively sensitive to low values, forcing you to address your weakest topics first.</p>
+                                    <code class="block bg-slate-50 p-3 rounded-lg text-xs font-mono text-indigo-600">Mh = T / Σ(1/Mi)</code>
+                                </div>
+                                <div class="bg-white rounded-2xl p-6 border border-slate-100 card-shadow">
+                                    <h4 class="font-bold text-slate-800 text-lg mb-2">Completion Velocity (CCV)</h4>
+                                    <p class="text-slate-600 text-sm mb-4">Objective: Measure how efficiently you move topics past the <b>D-Min (Mastery Threshold of 7.0)</b>. If velocity is low, debug your learning process.</p>
+                                    <code class="block bg-slate-50 p-3 rounded-lg text-xs font-mono text-indigo-600">Vc = T_Mastered / Total_Time</code>
+                                </div>
+                            </div>
+                        </section>
+
                         <!-- Phase 1 -->
                         <section>
                             <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 pb-2 border-b border-slate-100">Phase 1: Concept Deconstruction</h3>
@@ -963,8 +981,8 @@
                                                 <tr>
                                                     <td class="py-3 pr-4 font-bold text-slate-800">0</td>
                                                     <td class="py-3 px-4 font-medium">3m</td>
-                                                    <td class="py-3 px-4"><b>The Blur Test / Prediction</b><br>Scan headers & structure. <i>Predict</i> the mechanism/content.</td>
-                                                    <td class="py-3 pl-4"><b>Priming:</b> Activate semantic networks. Create "hooks" for new info.</td>
+                                                    <td class="py-3 px-4"><b>Priming (Pass 0)</b><br>Use the <b>Blur Test</b> (squint to see form over content) or <b>Architect's Blueprint</b> (Outline from memory after 90s scan).</td>
+                                                    <td class="py-3 pl-4"><b>Orientation:</b> Force a structural overview. Prevent detail fixation.</td>
                                                 </tr>
                                                 <tr>
                                                     <td class="py-3 pr-4 font-bold text-slate-800">1</td>
@@ -1033,16 +1051,22 @@
                                             <tbody class="divide-y divide-slate-200 text-slate-600">
                                                 <tr>
                                                     <td class="py-3 pr-4 font-bold text-slate-800">3</td>
-                                                    <td class="py-3 px-4 font-medium">10m</td>
-                                                    <td class="py-3 px-4"><b>Synthesis (Generative)</b><br>Close books. Generate a Clinical Vignette or "Teach the Board" brain dump from memory.</td>
-                                                    <td class="py-3 pl-4"><b>Production:</b> Verify you can <i>create</i> the knowledge, not just recognize it.</td>
+                                                    <td class="py-3 px-4 font-medium">15m</td>
+                                                    <td class="py-3 px-4"><b>Synthesis (Pass 3)</b><br>Generate a complete Clinical Vignette from a single molecular defect. Predict labs, signs, and treatment.</td>
+                                                    <td class="py-3 pl-4"><b>Assessment:</b> Determine your Mi score. If you can't synthesize, Mi < 7.</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="py-3 pr-4 font-bold text-slate-800">Post</td>
+                                                    <td class="py-3 px-4 font-medium">5m</td>
+                                                    <td class="py-3 px-4"><b>Self-Correction</b><br>Metacognition: Where did the explanation fall apart? Assign confience-based score.</td>
+                                                    <td class="py-3 pl-4"><b>Strategy:</b> Feed data back into MOF to choose the next topic.</td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>
                                     <div class="mt-6 flex items-center gap-2">
                                         <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                        <span class="text-xs text-slate-500 font-medium">Can I explain the "Why not"?</span>
+                                        <span class="text-xs text-slate-500 font-medium">Can I explain the "Why not"? (The Distractor Logic)</span>
                                     </div>
                                 </div>
 
@@ -1960,10 +1984,15 @@ function handleBlockSubmit(e) {
 
     function setTimerMode(newMode) {
         mode = newMode;
+        if (newMode === 'pomodoro') pomodoroTime = 25 * 60;
+        if (newMode === 'sprint') pomodoroTime = 60 * 60;
         resetTimer();
         modeBtns.forEach(btn => {
-            // specific logic to highlight the correct text mode
-            const isSelected = btn.innerText.toLowerCase().includes(newMode === 'stopwatch' ? 'stopwatch' : 'pomodoro');
+            const btnText = btn.innerText.toLowerCase();
+            let isSelected = false;
+            if (newMode === 'stopwatch') isSelected = btnText.includes('stopwatch');
+            else if (newMode === 'pomodoro') isSelected = btnText.includes('pomodoro');
+            else if (newMode === 'sprint') isSelected = btnText.includes('sprint');
             btn.classList.toggle('selected', isSelected);
         });
     }
