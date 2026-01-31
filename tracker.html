@@ -25,6 +25,10 @@
         @media (min-width: 768px) {
             .md\:table-cell { display: table-cell !important; }
         }
+        @media (min-width: 1280px) {
+            .xl\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+        }
+        .bg-slate-900 { background-color: rgb(15 23 42) !important; }
     </style>
     <style>
 
@@ -182,6 +186,11 @@
         .bg-blue-600 {
             background-color: steelblue;
         }
+        mastery-stats, block-controls, app-navigation, priority-sidebar,
+        topic-mastery-view, ingestion-checklist-view, lecture-catalog-view,
+        pass-history-view, walkthrough-view {
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
@@ -194,47 +203,12 @@
                 <p class="text-slate-500 mt-1">Brown University's Warren Alpert Medical School Learning System</p>
                 <div class="mt-6 flex items-center gap-3">
                     <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Block:</label>
-                    <div class="flex items-center gap-2">
-                        <select id="block-selector" class="bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 min-w-[200px] shadow-sm">
-                            <!-- Populated by JS -->
-                        </select>
-                        <button id="rename-block-btn" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors" title="Rename Block">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                        </button>
-                    </div>
+                    <block-controls id="block-controls"></block-controls>
                 </div>
             </div>
-            <div class="flex flex-wrap gap-4">
-                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[160px] relative group">
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Harmonic Mean (Mh)</p>
-                    <div class="flex items-baseline gap-2">
-                        <p id="mh-value" class="text-3xl font-bold text-indigo-600">0.0</p>
-                        <p id="mh-target-display" class="text-xs font-bold text-slate-300">/ 0.0</p>
-                    </div>
-                    <button id="set-goal-btn" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-indigo-400 hover:text-indigo-600 uppercase">Set Goal</button>
-                </div>
-                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lecture Coverage</p>
-                    <p id="ingestion-count" class="text-3xl font-bold text-blue-500">0 / 0</p>
-                </div>
-                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Topics Mastered</p>
-                    <p id="mastered-count" class="text-3xl font-bold text-emerald-500">0 / 0</p>
-                </div>
-            </div>
+            <mastery-stats id="mastery-stats"></mastery-stats>
         </div>
         
-        <!-- Goal Progress Bar -->
-        <div id="goal-progress-container" class="hidden bg-white p-5 rounded-2xl card-shadow border border-slate-100">
-            <div class="flex justify-between items-center mb-2">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Block Mastery Progress</p>
-                <p id="goal-percent" class="text-xs font-black text-indigo-600">0%</p>
-            </div>
-            <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                <div id="goal-progress-bar" class="bg-indigo-600 h-full transition-all duration-1000" style="width: 0%"></div>
-            </div>
-            <p id="goal-status-text" class="text-[10px] text-slate-400 mt-2 font-medium italic"></p>
-        </div>
     </header>
 
     <!-- Toolbar: Persistence Layer -->
@@ -256,242 +230,23 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <!-- Sidebar -->
         <aside class="lg:col-span-3 space-y-6">
-            <nav id="main-nav" class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
-                <button id="nav-dashboard" class="nav-link w-full text-left px-6 py-4 font-medium flex items-center gap-3 bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 transition-all">
-                    Topic Mastery
-                </button>
-                <button id="nav-checklist" class="nav-link w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600 transition-all">
-                    Lecture Checklist
-                </button>
-                <button id="nav-lectures" class="nav-link w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600 transition-all">
-                    Lecture Catalog
-                </button>
-                <button id="nav-history" class="nav-link w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600 transition-all">
-                    Pass History
-                </button>
-                <button id="nav-walkthrough" class="nav-link w-full text-left px-6 py-4 font-medium flex items-center gap-3 hover:bg-slate-50 text-slate-600 transition-all">
-                    Walkthrough
-                </button>
-            </nav>
-
-            <div class="bg-indigo-600 rounded-2xl p-6 text-white card-shadow">
-                <h3 class="font-bold text-lg mb-2">Next Priority</h3>
-                <div id="priority-topic" class="bg-white/10 rounded-xl p-3 border border-white/20">
-                    <span class="text-xs uppercase font-bold opacity-70">Add topics to begin</span>
-                </div>
-            </div>
+            <app-navigation id="app-navigation" active-view="dashboard"></app-navigation>
+            <priority-sidebar id="priority-sidebar"></priority-sidebar>
         </aside>
 
         <!-- Main -->
         <main class="lg:col-span-9">
-            <!-- Dashboard -->
-            <section id="view-dashboard" class="view space-y-6">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-slate-800">Topic Master List</h2>
-                                            <button id="add-topic-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Add Topic</button>                </div>
-                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-slate-100">
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Topic</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center hidden md:table-cell">Subject</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Mi</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Delete</th>
-                            </tr>
-                        </thead>
-                        <tbody id="topic-list-body" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
-            </section>
+            <topic-mastery-view id="view-dashboard" class="view"></topic-mastery-view>
 
-            <!-- Checklist View (NEW) -->
-            <section id="view-checklist" class="view hidden space-y-6">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-slate-800">Ingestion Checklist</h2>
-                    <p class="text-xs text-slate-400 italic">"Table stakes" documentation of lecture ingestion.</p>
-                </div>
-                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase w-12 text-center">Status</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Lecture</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Related Master Topics</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Date</th>
-                            </tr>
-                        </thead>
-                        <tbody id="checklist-body" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
-            </section>
+            <ingestion-checklist-view id="view-checklist" class="view hidden"></ingestion-checklist-view>
 
-            <!-- Lectures -->
-            <section id="view-lectures" class="view hidden space-y-6">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold">Lecture Catalog</h2>
-                                            <button id="add-lecture-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold">Add Lecture</button>                </div>
+            <lecture-catalog-view id="view-lectures" class="view hidden"></lecture-catalog-view>
                 
-                <!-- Filter Bar -->
-                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex flex-wrap gap-4 items-end">
-                    <div class="flex-1 min-w-[200px]">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Search Lectures</label>
-                        <input type="text" id="lecture-search" placeholder="Search title or topics..." class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div class="flex-1 min-w-[150px]">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Sort</label>
-                        <select id="lecture-sort" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500">
-                                                        <option value="date-desc">Date (Newest First)</option>
-                                                        <option value="date-asc">Date (Oldest First)</option>
-                                                        <option value="title-asc">Title (A-Z)</option>
-                                                        <option value="title-desc">Title (Z-A)</option>
-                                                    </select>
-                                                </div>
-                                                <div class="flex-1 min-w-[200px]">
-                                                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Filter by Topic</label>
-                                                    <select id="lecture-topic-filter" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500">
-                                                        <option value="all">All Topics</option>
-                                                    </select>
-                                                </div>
-                                                <div class="flex gap-2">
-                                                    <div>
-                                                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Start Date</label>
-                                                        <input type="date" id="lecture-start-date" class="px-3 py-2 text-sm rounded-lg border border-slate-200">
-                                                    </div>
-                                                    <div>
-                                                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">End Date</label>
-                                                        <input type="date" id="lecture-end-date" class="px-3 py-2 text-sm rounded-lg border border-slate-200">
-                                                    </div>
-                                                </div>                        <button id="reset-lecture-filters-btn" class="px-3 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider transition-colors">Reset</button>
-                </div>
 
-                <div id="lecture-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-            </section>
-
-            <!-- Pass History -->
-            <section id="view-history" class="view hidden space-y-6">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold">Pass History</h2>
-                    <div class="flex gap-2">
-                        <button id="bulk-log-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Bulk Log</button>
-                        <button id="log-lecture-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Log Lecture</button>
-                        <button id="log-new-pass-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Log New Pass</button>
-                    </div>
-                </div>
-                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Date</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Topic</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Sp3/Quiz</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Mi</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Notes</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-list-body" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
-            </section>
+            <pass-history-view id="view-history" class="view hidden"></pass-history-view>
             <!-- Walkthrough -->
-            <section id="view-walkthrough" class="view hidden space-y-8">
-                <div class="max-w-3xl mx-auto">
-                    <header class="mb-8">
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tight">The 60-Minute Mastery Sprint</h2>
-                        <p class="text-slate-500 mt-2 text-lg">V3 High-Intensity Learning Methodology</p>
-                    </header>
+            <walkthrough-view id="view-walkthrough" class="view hidden space-y-8"></walkthrough-view>
 
-                    <!-- Timer Widget -->
-                    <div class="timer-widget rounded-3xl p-8 text-white card-shadow mb-12 text-center">
-                        <div class="timer-mode-switch flex justify-center gap-6 mb-6">
-                            <span class="mode-btn selected text-xs font-bold tracking-widest uppercase cursor-pointer pb-1 border-b-2 border-transparent transition-all" onclick="setTimerMode('stopwatch')">Stopwatch</span>
-                            <span class="mode-btn text-xs font-bold tracking-widest uppercase cursor-pointer pb-1 border-b-2 border-transparent transition-all" onclick="setTimerMode('pomodoro')">Pomodoro (25m)</span>
-                        </div>
-                        <div class="timer-display font-mono text-6xl font-bold mb-8 tabular-nums tracking-tighter" id="timerDisplay">00:00</div>
-                        <div class="flex justify-center gap-4">
-                            <button id="btnStart" onclick="toggleTimer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold transition-all min-w-[140px]">Start Focus</button>
-                            <button onclick="resetTimer()" class="bg-white/10 hover:bg-white/20 text-red-300 px-8 py-3 rounded-xl font-bold transition-all">Reset</button>
-                        </div>
-                    </div>
-
-                    <div class="space-y-6">
-                        <!-- Pass 0 -->
-                        <div class="bg-white p-6 rounded-2xl border border-slate-100 card-shadow flex gap-6">
-                            <div class="flex-shrink-0 w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-black text-xl">0</div>
-                            <div class="flex-1">
-                                <div class="flex justify-between items-start mb-2">
-                                    <h3 class="text-lg font-bold text-slate-800">Priming the Brain</h3>
-                                    <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-wider">1-3 Minutes</span>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed mb-4">Force a structural overview and prevent detail fixation. You must see the forest before the trees.</p>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                        <p class="text-xs font-black text-indigo-600 uppercase mb-1">The Blur Test</p>
-                                        <p class="text-[11px] text-slate-500 leading-normal">Squint or move back until words are blurry. Identify headings, diagrams, and information architecture.</p>
-                                    </div>
-                                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                        <p class="text-xs font-black text-indigo-600 uppercase mb-1">Architect's Blueprint</p>
-                                        <p class="text-[11px] text-slate-500 leading-normal">Scan for 90s, then recreate the outline from memory. Predict the function of each section.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pass 1 -->
-                        <div class="bg-white p-6 rounded-2xl border border-slate-100 card-shadow flex gap-6">
-                            <div class="flex-shrink-0 w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-black text-xl">1</div>
-                            <div class="flex-1">
-                                <div class="flex justify-between items-start mb-2">
-                                    <h3 class="text-lg font-bold text-slate-800">Building the Scaffold</h3>
-                                    <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-wider">12 Minutes</span>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed">Construct the foundational blueprint. Create a <strong>linear flowchart</strong> of the core mechanism or a <strong>symptom correlation map</strong>. Ignore nuance; focus on the skeleton.</p>
-                            </div>
-                        </div>
-
-                        <!-- Pass 2 -->
-                        <div class="bg-white p-6 rounded-2xl border border-slate-100 card-shadow flex gap-6">
-                            <div class="flex-shrink-0 w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center font-black text-xl">2</div>
-                            <div class="flex-1">
-                                <div class="flex justify-between items-start mb-2">
-                                    <h3 class="text-lg font-bold text-slate-800">The Deep Dive</h3>
-                                    <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-wider">25 Minutes</span>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed mb-4">High-effort, elaborative encoding. Move from static knowledge to a dynamic, predictive model.</p>
-                                <ul class="space-y-2">
-                                    <li class="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase"><span class="w-1.5 h-1.5 bg-purple-400 rounded-full"></span> System Stress-Test: "What if?"</li>
-                                    <li class="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase"><span class="w-1.5 h-1.5 bg-purple-400 rounded-full"></span> Differential Diagnosis: Mechanism of Distinction</li>
-                                    <li class="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase"><span class="w-1.5 h-1.5 bg-purple-400 rounded-full"></span> Connect nodes and break the system</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <!-- Pass 3 -->
-                        <div class="bg-white p-6 rounded-2xl border border-slate-100 card-shadow flex gap-6">
-                            <div class="flex-shrink-0 w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center font-black text-xl">3</div>
-                            <div class="flex-1">
-                                <div class="flex justify-between items-start mb-2">
-                                    <h3 class="text-lg font-bold text-slate-800">Synthesis & Assessment</h3>
-                                    <span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-wider">15 Minutes</span>
-                                </div>
-                                <p class="text-slate-600 text-sm leading-relaxed">Test fluency through active production. Close your books. Generate a <strong>Clinical Vignette</strong> or "Teach the Board" brain dump from memory. This determines your Mastery Score (Mi).</p>
-                            </div>
-                        </div>
-
-                        <!-- Post-Sprint -->
-                        <div class="bg-indigo-600 p-6 rounded-2xl text-white card-shadow flex gap-6">
-                            <div class="flex-shrink-0 w-12 h-12 bg-white/20 rounded-full flex items-center justify-center font-black text-xl">✓</div>
-                            <div class="flex-1">
-                                <div class="flex justify-between items-start mb-2">
-                                    <h3 class="text-lg font-bold">Self-Correction</h3>
-                                    <span class="px-3 py-1 bg-white/20 rounded-lg text-xs font-bold uppercase tracking-wider">5 Minutes</span>
-                                </div>
-                                <p class="text-indigo-100 text-sm leading-relaxed">Metacognition and planning. Identify recall failures. Assign a confidence-based Mi score. Your MOF will triage this data to guide your next sprint.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </main>
     </div>
 </div>
@@ -667,6 +422,711 @@
         </div>
     </div>
 <script>
+    // --- Custom Elements ---
+
+    class MasteryStats extends HTMLElement {
+        constructor() {
+            super();
+            this._data = { mh: "0.0", target: "0.0", ingestion: "0 / 0", mastered: "0 / 0" };
+        }
+        set data(value) {
+            this._data = value;
+            this.render();
+        }
+        connectedCallback() { this.render(); }
+        render() {
+            const mh = parseFloat(this._data.mh);
+            const target = parseFloat(this._data.target);
+            const showProgress = target > 0;
+            const percent = showProgress ? Math.min(100, Math.round((mh / target) * 100)) : 0;
+
+            this.innerHTML = `
+                <div class="flex flex-wrap gap-4">
+                    <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[160px] relative group">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Harmonic Mean (Mh)</p>
+                        <div class="flex items-baseline gap-2">
+                            <p class="text-3xl font-bold text-indigo-600">${this._data.mh}</p>
+                            <p class="text-xs font-bold text-slate-300">/ ${this._data.target}</p>
+                        </div>
+                        <button onclick="openGoalModal()" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-indigo-400 hover:text-indigo-600 uppercase">Set Goal</button>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lecture Coverage</p>
+                        <p class="text-3xl font-bold text-blue-500">${this._data.ingestion}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Topics Mastered</p>
+                        <p class="text-3xl font-bold text-emerald-500">${this._data.mastered}</p>
+                    </div>
+                </div>
+                ${showProgress ? `
+                <div class="mt-6 bg-white p-5 rounded-2xl card-shadow border border-slate-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Block Mastery Progress</p>
+                        <p class="text-xs font-black text-indigo-600">${percent}%</p>
+                    </div>
+                    <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+                        <div class="bg-indigo-600 h-full transition-all duration-1000" style="width: ${percent}%"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2 font-medium italic">
+                        ${percent >= 100 ? "Goal Met." : `${(target - mh).toFixed(2)} points to go.`}
+                    </p>
+                </div>
+                ` : ''}
+            `;
+        }
+    }
+    customElements.define('mastery-stats', MasteryStats);
+
+    class BlockControls extends HTMLElement {
+        set data({ blocks, activeBlockId, isAllBlocks }) {
+            this._blocks = blocks;
+            this._activeBlockId = activeBlockId;
+            this._isAllBlocks = isAllBlocks;
+            this.render();
+        }
+        connectedCallback() { this.render(); }
+        render() {
+            if (!this._blocks) return;
+            const options = `<option value="all" ${this._isAllBlocks ? 'selected' : ''}>All Blocks (Longitudinal)</option>` +
+                          this._blocks.map(b => `<option value="${b.id}" ${(!this._isAllBlocks && b.id === this._activeBlockId) ? 'selected' : ''}>${b.name}</option>`).join('') +
+                          '<option value="new_block_action" class="font-bold text-indigo-600">+ New Block...</option>';
+
+            this.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="relative min-w-[220px]">
+                        <select onchange="handleBlockChange(this.value)" class="w-full bg-white border border-slate-200 pl-4 pr-10 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm">
+                            ${options}
+                        </select>
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                    <button onclick="openRenameBlock()" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors ${this._isAllBlocks ? 'hidden' : ''}" title="Rename Block">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </button>
+                </div>
+            `;
+        }
+    }
+    customElements.define('block-controls', BlockControls);
+
+    class AppNavigation extends HTMLElement {
+        static get observedAttributes() { return ['active-view']; }
+        attributeChangedCallback() { this.render(); }
+        connectedCallback() { this.render(); }
+        render() {
+            const activeView = this.getAttribute('active-view');
+            const navItems = [
+                { id: 'dashboard', label: 'Topic Mastery' },
+                { id: 'checklist', label: 'Lecture Checklist' },
+                { id: 'lectures', label: 'Lecture Catalog' },
+                { id: 'history', label: 'Pass History' },
+                { id: 'walkthrough', label: 'Walkthrough' }
+            ];
+            this.innerHTML = `
+                <nav class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                    ${navItems.map(item => {
+                        const isActive = item.id === activeView;
+                        return `
+                            <button onclick="switchView('${item.id}')" class="w-full text-left px-6 py-4 font-medium flex items-center gap-3 transition-all ${isActive ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600' : 'hover:bg-slate-50 text-slate-600'}">
+                                ${item.label}
+                            </button>
+                        `;
+                    }).join('')}
+                </nav>
+            `;
+        }
+    }
+    customElements.define('app-navigation', AppNavigation);
+
+    class PrioritySidebar extends HTMLElement {
+        set data(priority) {
+            this._priority = priority;
+            this.render();
+        }
+        connectedCallback() { this.render(); }
+        render() {
+            const content = this._priority ? `
+                <div class="bg-white/10 rounded-xl p-3 border border-white/20">
+                    <p class="text-[10px] uppercase font-bold text-indigo-200 mb-1">${this._priority.topic.subject || 'General'}</p>
+                    <p class="text-sm font-bold text-white mb-2 leading-tight">${this._priority.topic.name}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-medium text-indigo-200 italic">Mh: ${this._priority.mi.toFixed(1)}</span>
+                        <button onclick="openLogPassForTopic('${this._priority.topic.id}')" class="text-[10px] bg-white text-indigo-600 px-2 py-1 rounded font-black uppercase">LOG</button>
+                    </div>
+                </div>
+            ` : '<div class="bg-white/10 rounded-xl p-3 border border-white/20"><span class="text-xs uppercase font-bold opacity-70">Add topics to begin</span></div>';
+
+            this.innerHTML = `
+                <div class="bg-indigo-600 rounded-2xl p-6 text-white card-shadow">
+                    <h3 class="font-bold text-lg mb-2">Next Priority</h3>
+                    ${content}
+                </div>
+            `;
+        }
+    }
+    customElements.define('priority-sidebar', PrioritySidebar);
+
+    class TopicMasteryView extends HTMLElement {
+        static renderRow(topic) {
+            const stats = getTopicStats(topic.id);
+            const tagHtml = (topic.tags || []).map(tag => `<span class="ml-2 text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-mono">${tag}</span>`).join('');
+            let colorClass = parseFloat(stats.mi) >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700';
+            const badgeHtml = `<span class="px-3 py-1 rounded-full text-xs font-bold ${colorClass}">${stats.mi}</span>`;
+
+            return `<tr>
+                <td class="px-6 py-4 font-bold text-slate-800">${topic.name}${tagHtml}</td>
+                <td class="text-center hidden md:table-cell">${topic.subject}</td>
+                <td class="text-center">${badgeHtml}</td>
+                <td class="text-right px-6 space-x-2">
+                    <button data-id="${topic.id}" class="edit-topic-btn text-indigo-300 hover:text-indigo-600 transition-colors text-[10px] font-bold uppercase">Edit</button>
+                    <button data-id="${topic.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors text-lg">×</button>
+                </td>
+            </tr>`;
+        }
+        set data({ state, activeTopics, isAllBlocks }) {
+            this._state = state;
+            this._activeTopics = activeTopics;
+            this._isAllBlocks = isAllBlocks;
+            this.render();
+        }
+        connectedCallback() {
+            this.addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                if (btn.classList.contains('edit-topic-btn')) openEditTopic(btn.dataset.id);
+                if (btn.classList.contains('delete-topic-btn')) deleteTopic(btn.dataset.id);
+            });
+        }
+        render() {
+            if (!this._state) return;
+            let tableRows = '';
+            if (this._isAllBlocks) {
+                const groupedHtml = this._state.blocks.map(block => {
+                    const blockTopics = this._state.topics.filter(t => t.blockId === block.id);
+                    if (blockTopics.length === 0) return '';
+                    const sorted = blockTopics.sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
+                    return `
+                        <tr class="bg-slate-100/80 border-y border-slate-200">
+                            <td colspan="4" class="px-6 py-2 text-xs font-bold text-slate-500 uppercase tracking-widest">${block.name}</td>
+                        </tr>
+                        ${sorted.map(t => TopicMasteryView.renderRow(t)).join('')}
+                    `;
+                }).join('');
+
+                const orphaned = this._state.topics.filter(t => !this._state.blocks.find(b => b.id === t.blockId));
+                let orphanedHtml = '';
+                if (orphaned.length > 0) {
+                    orphanedHtml = `
+                        <tr class="bg-red-50 border-y border-red-100">
+                            <td colspan="4" class="px-6 py-2 text-xs font-bold text-red-500 uppercase tracking-widest">Unassigned</td>
+                        </tr>` + orphaned.map(t => TopicMasteryView.renderRow(t)).join('');
+                }
+                tableRows = groupedHtml + orphanedHtml;
+            } else {
+                tableRows = this._activeTopics.sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi).map(t => TopicMasteryView.renderRow(t)).join('');
+            }
+
+            if (!tableRows) tableRows = '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">No topics found.</td></tr>';
+
+            this.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-800">Topic Master List</h2>
+                    <button onclick="openAddTopic()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all ${this._isAllBlocks ? 'hidden' : ''}">Add Topic</button>
+                </div>
+                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-100">
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Topic</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center hidden md:table-cell">Subject</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Mi</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">${tableRows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+    }
+    customElements.define('topic-mastery-view', TopicMasteryView);
+
+    class IngestionChecklistView extends HTMLElement {
+        set data({ state, lectures }) {
+            this._state = state;
+            this._lectures = lectures;
+            this.render();
+        }
+        connectedCallback() {
+            this.addEventListener('change', (e) => {
+                if (e.target.classList.contains('toggle-ingested-check')) toggleIngested(e.target.dataset.id);
+            });
+        }
+        render() {
+            if (!this._state) return;
+            const tableRows = [...this._lectures].sort((a, b) => new Date(b.date) - new Date(a.date)).map(l => {
+                const topicBadges = l.topics.map(tid => {
+                    const topic = this._state.topics.find(t => t.id === tid);
+                    return topic ? `<span class="bg-indigo-50 text-indigo-600 text-[10px] px-2 py-0.5 rounded mr-1">${topic.name}</span>` : '';
+                }).join('');
+                return `
+                    <tr class="${l.ingested ? 'ingested-row' : ''} transition-all">
+                        <td class="px-6 py-4 text-center">
+                            <input type="checkbox" ${l.ingested ? 'checked' : ''} data-id="${l.id}" class="toggle-ingested-check w-5 h-5 cursor-pointer text-blue-600 rounded">
+                        </td>
+                        <td class="px-6 py-4 font-bold text-slate-800 ${l.ingested ? 'ingested-text' : ''}">${l.title}</td>
+                        <td class="px-6 py-4">${topicBadges}</td>
+                        <td class="px-6 py-4 text-right text-xs text-slate-400 font-mono">${l.date}</td>
+                    </tr>
+                `;
+            }).join('') || '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">No lectures found.</td></tr>';
+            this.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-800">Ingestion Checklist</h2>
+                    <p class="text-xs text-slate-400 italic">"Table stakes" documentation of lecture ingestion.</p>
+                </div>
+                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase w-12 text-center">Status</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Lecture</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Related Master Topics</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">${tableRows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+    }
+    customElements.define('ingestion-checklist-view', IngestionChecklistView);
+
+    class LectureCatalogView extends HTMLElement {
+        static renderCard(lecture, state) {
+            return `
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow relative group ${lecture.ingested ? 'opacity-60 grayscale-[0.5]' : ''}">
+                    <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button data-id="${lecture.id}" class="edit-lecture-btn text-indigo-400 hover:text-indigo-600 text-[10px] font-bold">EDIT</button>
+                        <button data-id="${lecture.id}" class="delete-lecture-btn text-red-300 hover:text-red-500">×</button>
+                    </div>
+                    <div class="flex items-start gap-2 pr-12">
+                        ${lecture.ingested ? '<span class="text-emerald-500 font-bold text-lg">✓</span>' : ''}
+                        <div>
+                            <p class="font-bold text-slate-800 ${lecture.ingested ? 'line-through decoration-emerald-500/50' : ''}">${lecture.title}</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase">${lecture.date}</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex flex-wrap gap-1">${lecture.topics.map(tid => {
+                        const t = state.topics.find(t => t.id === tid);
+                        return t ? `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${t.name}</span>` : '';
+                    }).join('')}</div>
+                </div>
+            `;
+        }
+        set data({ state, lectures, activeTopics, isAllBlocks }) {
+            this._state = state;
+            this._lectures = lectures;
+            this._activeTopics = activeTopics;
+            this._isAllBlocks = isAllBlocks;
+            this.render();
+        }
+        connectedCallback() {
+            this.addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                if (btn.classList.contains('edit-lecture-btn')) openEditLecture(btn.dataset.id);
+                if (btn.classList.contains('delete-lecture-btn')) deleteLecture(btn.dataset.id);
+            });
+            this.addEventListener('input', (e) => {
+                if (e.target.id === 'lecture-search' || e.target.id === 'lecture-sort' || e.target.id === 'lecture-topic-filter') {
+                    this.renderGrid();
+                }
+            });
+        }
+        render() {
+            if (!this._state) return;
+            const topicOptions = '<option value="all">All Topics</option>' +
+                               (this._activeTopics || []).map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+
+            this.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">Lecture Catalog</h2>
+                    <button onclick="openAddLecture()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold ${this._isAllBlocks ? 'hidden' : ''}">Add Lecture</button>
+                </div>
+                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex flex-wrap gap-4 items-end">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Search Lectures</label>
+                        <input type="text" id="lecture-search" placeholder="Search title or topics..." class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Sort</label>
+                        <select id="lecture-sort" class="w-full bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm">
+                            <option value="date-desc">Date (Newest)</option>
+                            <option value="date-asc">Date (Oldest)</option>
+                            <option value="title-asc">Title (A-Z)</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Filter Topic</label>
+                        <select id="lecture-topic-filter" class="w-full bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm">
+                            ${topicOptions}
+                        </select>
+                    </div>
+                    <button onclick="resetLectureFilters()" class="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase">Reset</button>
+                </div>
+                <div id="lecture-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+            `;
+            this.renderGrid();
+        }
+        renderGrid() {
+            const grid = this.querySelector('#lecture-list');
+            if (!grid) return;
+            const search = this.querySelector('#lecture-search').value.toLowerCase();
+            const sort = this.querySelector('#lecture-sort').value;
+            const topicFilter = this.querySelector('#lecture-topic-filter').value;
+
+            let filtered = this._lectures.filter(l => {
+                const matchesSearch = l.title.toLowerCase().includes(search) ||
+                                    l.topics.some(tid => this._state.topics.find(t => t.id === tid)?.name.toLowerCase().includes(search));
+                const matchesTopic = topicFilter === 'all' || l.topics.includes(topicFilter);
+                return matchesSearch && matchesTopic;
+            });
+
+            filtered.sort((a, b) => {
+                if (sort === 'date-desc') return new Date(b.date) - new Date(a.date);
+                if (sort === 'date-asc') return new Date(a.date) - new Date(b.date);
+                return a.title.localeCompare(b.title);
+            });
+
+            grid.innerHTML = filtered.map(l => LectureCatalogView.renderCard(l, this._state)).join('') ||
+                '<p class="text-slate-400 text-center col-span-full py-10 italic">No matching lectures found.</p>';
+        }
+    }
+    customElements.define('lecture-catalog-view', LectureCatalogView);
+
+    class PassHistoryView extends HTMLElement {
+        static renderRow(pass, topicName) {
+            const mi = ((0.7 * pass.sp3) + (0.3 * pass.quiz)).toFixed(1);
+            return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-3 text-xs text-slate-500 whitespace-nowrap">${pass.date}</td>
+                    <td class="px-6 py-3 text-xs font-bold text-slate-800">${topicName}</td>
+                    <td class="text-center text-xs font-medium whitespace-nowrap">${pass.sp3} / ${pass.quiz}</td>
+                    <td class="text-center text-xs font-bold text-indigo-600">${mi}</td>
+                    <td class="px-6 py-3 text-[11px] text-slate-500 max-w-xs italic break-words">${pass.note || '—'}</td>
+                    <td class="text-right px-6 space-x-2 whitespace-nowrap">
+                        <button data-id="${pass.id}" class="edit-pass-btn text-indigo-300 hover:text-indigo-600 text-[10px] font-bold uppercase">Edit</button>
+                        <button data-id="${pass.id}" class="delete-pass-btn text-red-200 hover:text-red-500 text-[10px] font-bold uppercase">Del</button>
+                    </td>
+                </tr>
+            `;
+        }
+        set data({ state, activeTopics, isAllBlocks }) {
+            this._state = state;
+            this._activeTopics = activeTopics;
+            this._isAllBlocks = isAllBlocks;
+            this.render();
+        }
+        connectedCallback() {
+            this.addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                if (btn.classList.contains('edit-pass-btn')) openEditPass(btn.dataset.id);
+                if (btn.classList.contains('delete-pass-btn')) deletePass(btn.dataset.id);
+            });
+        }
+        render() {
+            if (!this._state) return;
+            const activeTopicIds = new Set(this._activeTopics.map(t => t.id));
+            const activePasses = this._state.passes.filter(p => activeTopicIds.has(p.topicId));
+            const tableRows = activePasses.sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => {
+                const topic = this._state.topics.find(t => t.id === p.topicId);
+                return PassHistoryView.renderRow(p, topic ? topic.name : 'Unknown');
+            }).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No history available.</td></tr>';
+            this.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">Pass History</h2>
+                    <div class="flex gap-2 ${this._isAllBlocks ? 'hidden' : ''}">
+                        <button onclick="openBulkLog()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Bulk Log</button>
+                        <button onclick="openLogLecture()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Log Lecture</button>
+                        <button onclick="openLogPass()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Log New Pass</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Date</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Topic</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Sp3/Quiz</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-center">Mi</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Notes</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">${tableRows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+    }
+    customElements.define('pass-history-view', PassHistoryView);
+
+    class WalkthroughView extends HTMLElement {
+        static get template() {
+            return `
+                <div class="max-w-4xl mx-auto pb-20">
+                    <div class="bg-indigo-600 rounded-3xl p-8 text-white card-shadow mb-8 text-center relative overflow-hidden">
+                        <div class="relative z-10">
+                            <h2 class="text-3xl font-black mb-2">The Learning System</h2>
+                            <p class="text-indigo-100 font-medium">From First Principles to High-Yield Synthesis</p>
+                        </div>
+                        <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full"></div>
+                    </div>
+
+                    <!-- Timer Widget -->
+                    <div class="bg-slate-900 rounded-3xl p-8 text-white card-shadow mb-12 text-center">
+                        <div class="timer-mode-switch flex justify-center gap-6 mb-6">
+                            <span class="mode-btn selected text-xs font-bold tracking-widest uppercase cursor-pointer pb-1 border-b-2 border-transparent transition-all" onclick="setTimerMode('stopwatch')">Stopwatch</span>
+                            <span class="mode-btn text-xs font-bold tracking-widest uppercase cursor-pointer pb-1 border-b-2 border-transparent transition-all" onclick="setTimerMode('pomodoro')">Pomodoro (25m)</span>
+                        </div>
+                        <div class="timer-display font-mono text-6xl font-bold mb-8 tabular-nums tracking-tighter" id="timerDisplay">00:00</div>
+                        <div class="flex justify-center gap-4">
+                            <button id="btnStart" onclick="toggleTimer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold transition-all min-w-[140px]">Start Focus</button>
+                            <button onclick="resetTimer()" class="bg-white/10 hover:bg-white/20 text-red-300 px-8 py-3 rounded-xl font-bold transition-all">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-16">
+                        <!-- Phase 1 -->
+                        <section>
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 pb-2 border-b border-slate-100">Phase 1: Concept Deconstruction</h3>
+
+                            <div class="space-y-8">
+                                <div class="bg-white rounded-2xl p-6 border border-slate-100 card-shadow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex gap-4">
+                                            <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">1</span>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-lg">Scope & Definition</h4>
+                                                <p class="text-slate-600 text-sm mt-1">Select a high-yield topic. Define the boundaries: What is this *not*? Identify the "First Principles" mechanism driving the pathology.</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 rounded bg-blue-50 text-blue-600 text-[10px] font-black uppercase">Understand</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white rounded-2xl p-6 border border-slate-100 card-shadow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex gap-4">
+                                            <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">2</span>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-lg">Mechanism Mapping</h4>
+                                                <p class="text-slate-600 text-sm mt-1">Sketch the physiological pathway. Identify the exact break point in the chain. <i>If you can't draw the mechanism, you cannot write the question.</i></p>
+                                                <div class="mt-4 flex items-center gap-2">
+                                                    <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                                    <span class="text-xs text-slate-500 font-medium">Can I explain the "Why" simply?</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 rounded bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase">Analyze</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                                    <div class="flex justify-between items-start mb-6">
+                                        <div class="flex gap-4">
+                                            <span class="w-8 h-8 rounded-lg bg-white text-slate-400 flex items-center justify-center font-black">2a</span>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-lg">In-depth</h4>
+                                                <p class="text-slate-500 text-sm mt-1">Sketch the physiological pathway. Identify the exact break point in the chain.</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 rounded bg-slate-200 text-slate-600 text-[10px] font-black uppercase">Details</span>
+                                    </div>
+
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left text-xs border-collapse">
+                                            <thead>
+                                                <tr class="text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                                                    <th class="py-2 pr-4 font-black">Pass</th>
+                                                    <th class="py-2 px-4 font-black">Time</th>
+                                                    <th class="py-2 px-4 font-black">Activity</th>
+                                                    <th class="py-2 pl-4 font-black">Cognitive Goal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-200 text-slate-600">
+                                                <tr>
+                                                    <td class="py-3 pr-4 font-bold text-slate-800">0</td>
+                                                    <td class="py-3 px-4 font-medium">3m</td>
+                                                    <td class="py-3 px-4"><b>The Blur Test / Prediction</b><br>Scan headers & structure. <i>Predict</i> the mechanism/content.</td>
+                                                    <td class="py-3 pl-4"><b>Priming:</b> Activate semantic networks. Create "hooks" for new info.</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="py-3 pr-4 font-bold text-slate-800">1</td>
+                                                    <td class="py-3 px-4 font-medium">12m</td>
+                                                    <td class="py-3 px-4"><b>Foundational Mapping</b><br>Create a linear flowchart of the core mechanism or symptom correlations.</td>
+                                                    <td class="py-3 pl-4"><b>Structure:</b> Build the skeleton. Ignore nuance.</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="py-3 pr-4 font-bold text-slate-800">2</td>
+                                                    <td class="py-3 px-4 font-medium">25m</td>
+                                                    <td class="py-3 px-4"><b>System Stress-Test</b><br>"Deep Dive." Ask "What if?" Break the system. Compare/Contrast with similar diseases.</td>
+                                                    <td class="py-3 pl-4"><b>Elaboration:</b> Connect nodes. Deep encoding.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p class="mt-6 text-[11px] text-slate-400 italic font-medium">If you can't draw the mechanism, you cannot write the question. (Phase 2)</p>
+                                    <div class="mt-2 flex items-center gap-2">
+                                        <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="text-xs text-slate-500 font-medium">Can I explain the "Why" simply?</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Phase 2 -->
+                        <section>
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 pb-2 border-b border-slate-100">Phase 2: Vignette Construction</h3>
+
+                            <div class="space-y-8">
+                                <div class="bg-white rounded-2xl p-6 border border-slate-100 card-shadow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex gap-4">
+                                            <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">3</span>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-lg">The NBME Vignette</h4>
+                                                <p class="text-slate-600 text-sm mt-1">Draft the patient story. Use <b>Demographics, Duration, & Dynamics</b> (symptoms). Avoid buzzwords; describe the finding (e.g., "staccato cough" instead of "pertussis").</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 rounded bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase">Synthesize</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                                    <div class="flex justify-between items-start mb-6">
+                                        <div class="flex gap-4">
+                                            <span class="w-8 h-8 rounded-lg bg-white text-slate-400 flex items-center justify-center font-black">3a</span>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-lg">Vignette In-depth</h4>
+                                                <p class="text-slate-500 text-sm mt-1">Lets make a good vignette</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 rounded bg-slate-200 text-slate-600 text-[10px] font-black uppercase">Details</span>
+                                    </div>
+
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left text-xs border-collapse">
+                                            <thead>
+                                                <tr class="text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                                                    <th class="py-2 pr-4 font-black">Pass</th>
+                                                    <th class="py-2 px-4 font-black">Time</th>
+                                                    <th class="py-2 px-4 font-black">Activity</th>
+                                                    <th class="py-2 pl-4 font-black">Cognitive Goal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-200 text-slate-600">
+                                                <tr>
+                                                    <td class="py-3 pr-4 font-bold text-slate-800">3</td>
+                                                    <td class="py-3 px-4 font-medium">10m</td>
+                                                    <td class="py-3 px-4"><b>Synthesis (Generative)</b><br>Close books. Generate a Clinical Vignette or "Teach the Board" brain dump from memory.</td>
+                                                    <td class="py-3 pl-4"><b>Production:</b> Verify you can <i>create</i> the knowledge, not just recognize it.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="mt-6 flex items-center gap-2">
+                                        <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="text-xs text-slate-500 font-medium">Can I explain the "Why not"?</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white rounded-2xl p-6 border border-slate-100 card-shadow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex gap-4">
+                                            <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">4</span>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-lg">Distractor Logic</h4>
+                                                <p class="text-slate-600 text-sm mt-1">Generate 4 wrong answers. Each must be the correct answer for a <i>different</i> disease in the differential.</p>
+                                                <div class="mt-4 flex items-center gap-2">
+                                                    <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                                    <span class="text-xs text-slate-500 font-medium">Are distractors distinct pathologies?</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 rounded bg-amber-50 text-amber-600 text-[10px] font-black uppercase">Evaluate</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Phase 3 -->
+                        <section>
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 pb-2 border-b border-slate-100">Phase 3: Taxonomy Audit</h3>
+
+                            <div class="space-y-8">
+                                <div class="bg-white rounded-2xl p-6 border border-slate-100 card-shadow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div class="flex gap-4">
+                                            <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">5</span>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-lg">The "Two-Step" Check</h4>
+                                                <p class="text-slate-600 text-sm mt-1">Does the question require identifying the diagnosis first, then answering a secondary question (e.g., side effect of the treatment)?</p>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 rounded bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase">Analyze</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                                    <div class="flex justify-between items-start mb-6">
+                                        <div class="flex gap-4">
+                                            <span class="w-8 h-8 rounded-lg bg-white text-slate-400 flex items-center justify-center font-black">5a</span>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 text-lg">Expert Calibration</h4>
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 rounded bg-slate-200 text-slate-600 text-[10px] font-black uppercase">Details</span>
+                                    </div>
+
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left text-xs border-collapse">
+                                            <thead>
+                                                <tr class="text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                                                    <th class="py-2 pr-4 font-black">Pass</th>
+                                                    <th class="py-2 px-4 font-black">Time</th>
+                                                    <th class="py-2 px-4 font-black">Activity</th>
+                                                    <th class="py-2 pl-4 font-black">Cognitive Goal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-200 text-slate-600">
+                                                <tr>
+                                                    <td class="py-3 pr-4 font-bold text-slate-800">4</td>
+                                                    <td class="py-3 px-4 font-medium">10m</td>
+                                                    <td class="py-3 px-4"><b>Calibration (Discriminative)</b><br>Do <b>3-5 High-Yield Questions</b> (USMLE-Rx/Lecturio). <i>Optional:</i> AI Audit of Vignette.</td>
+                                                    <td class="py-3 pl-4"><b>Reality Check:</b> Detect "Illusion of Competence." "Sentinel" check for major flaws.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <p class="mt-6 text-sm text-slate-500 font-medium italic">"You need to make sure that you're able to answer questions about what you think you know, no matter what the order of complexity."</p>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            `;
+        }
+        connectedCallback() { this.render(); }
+        render() { this.innerHTML = WalkthroughView.template; }
+    }
+    customElements.define('walkthrough-view', WalkthroughView);
+
     let state = { blocks: [], activeBlockId: null, topics: [], lectures: [], passes: [], activeViewId: 'dashboard' };
 
     function init() {
@@ -721,6 +1181,7 @@
             passes: []
         };
         save();
+        render();
     }
 
     function save() {
@@ -784,6 +1245,7 @@
         if (lecture) {
             lecture.ingested = !lecture.ingested;
             save();
+        render();
         }
     }
 
@@ -864,7 +1326,8 @@
         if(confirm("Delete topic and its history?")) { 
             state.topics = state.topics.filter(t => t.id !== id); 
             state.passes = state.passes.filter(p => p.topicId !== id); 
-            save(); 
+            save();
+        render();
         }
     }
 
@@ -890,11 +1353,19 @@
     function deleteLecture(id) { 
         if(confirm("Delete lecture?")) { 
             state.lectures = state.lectures.filter(l => l.id !== id); 
-            save(); 
+            save();
+        render();
         } 
     }
 
     function openLogPass() {
+        populatePassTopicDropdown();
+        toggleModal('pass-modal');
+    }
+
+    function openLogPassForTopic(topicId) {
+        populatePassTopicDropdown();
+        document.getElementById('pass-topic-id').value = topicId;
         toggleModal('pass-modal');
     }
 
@@ -918,7 +1389,8 @@
     function deletePass(id) { 
         if(confirm("Permanently delete this pass?")) { 
             state.passes = state.passes.filter(p => p.id !== id); 
-            save(); 
+            save();
+        render();
         } 
     }
 
@@ -985,6 +1457,7 @@
 
         toggleModal('log-lecture-modal');
         save();
+        render();
     }
 
     // --- Bulk Log Logic ---
@@ -1136,6 +1609,7 @@
 
         if (count > 0) {
             save();
+            render();
             document.getElementById('bulk-pass-modal').classList.add('hidden');
             // Flash success?
         } else {
@@ -1151,7 +1625,8 @@
             e.target.value = state.activeBlockId; 
         } else {
             state.activeBlockId = val;
-            save(); 
+            save();
+        render();
         }
     }
 
@@ -1163,6 +1638,7 @@ function handleBlockSubmit(e) {
         state.activeBlockId = newId;
         toggleModal('block-modal');
         save();
+        render();
     }
 
     function renameActiveBlock() {
@@ -1171,7 +1647,7 @@ function handleBlockSubmit(e) {
         const newName = prompt("Rename Block:", block.name);
         if (newName && newName.trim() !== "") {
             block.name = newName.trim();
-            save(); // Render will update the selector options
+            save(); render(); // Render will update the selector options
         }
     }
 
@@ -1200,6 +1676,7 @@ function handleBlockSubmit(e) {
         }
         toggleModal('topic-modal');
         save();
+        render();
     }
 
     function handleLectureSubmit(e) {
@@ -1224,6 +1701,7 @@ function handleBlockSubmit(e) {
         }
         toggleModal('lecture-modal'); 
         save();
+        render();
     }
 
     function handlePassSubmit(e) {
@@ -1241,6 +1719,7 @@ function handleBlockSubmit(e) {
         } else state.passes.push({ id: 'p'+Date.now(), topicId, sp3, quiz, date, note });
         toggleModal('pass-modal'); 
         save();
+        render();
     }
 
     function handleGoalSubmit(e) {
@@ -1249,28 +1728,16 @@ function handleBlockSubmit(e) {
         block.masteryGoal = parseFloat(document.getElementById('goal-mh-target').value);
         toggleModal('goal-modal'); 
         save();
+        render();
     }
 
     /**
      * Updates which view is currently visible and highlights the sidebar.
      */
-    function updateNavigationUI(activeViewId) {
-        document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
-        const activeView = document.getElementById('view-' + activeViewId);
-        if (activeView) activeView.classList.remove('hidden');
-
-        document.querySelectorAll('.nav-link').forEach(btn => {
-            const isActive = btn.id === 'nav-' + activeViewId;
-            btn.classList.toggle('bg-indigo-50', isActive);
-            btn.classList.toggle('text-indigo-700', isActive);
-            btn.classList.toggle('border-l-4', isActive);
-            btn.classList.toggle('border-indigo-600', isActive);
-        });
-    }
-
     function switchView(viewId) {
         state.activeViewId = viewId;
         save();
+        render();
     }
 
     function getTopicStats(topicId) {
@@ -1311,303 +1778,52 @@ function handleBlockSubmit(e) {
 
     // --- Core Rendering ---
 
-    /**
-     * Helper to render a badge based on mastery index.
-     */
-    function getBadgeHtml(mi) {
-        let colorClass = parseFloat(mi) >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700';
-        return `<span class="px-3 py-1 rounded-full text-xs font-bold ${colorClass}">${mi}</span>`;
-    }
 
-    /**
-     * Renders a single topic row for the Topic Mastery table.
-     */
-    function renderTopicRow(topic) {
-        const stats = getTopicStats(topic.id);
-        const tagHtml = (topic.tags || []).map(tag => `<span class="ml-2 text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-mono">${tag}</span>`).join('');
-        return `<tr>
-            <td class="px-6 py-4 font-bold text-slate-800">
-                ${topic.name}${tagHtml}
-            </td>
-            <td class="text-center hidden md:table-cell">${topic.subject}</td>
-            <td class="text-center">${getBadgeHtml(stats.mi)}</td>
-            <td class="text-right px-6 space-x-2">
-                <button data-id="${topic.id}" class="edit-topic-btn text-indigo-300 hover:text-indigo-600 transition-colors text-[10px] font-bold uppercase">Edit</button>
-                <button data-id="${topic.id}" class="delete-topic-btn text-slate-300 hover:text-red-500 transition-colors text-lg">×</button>
-            </td>
-        </tr>`;
-    }
 
-    /**
-     * Renders the Topic Mastery view.
-     */
-    function renderTopicMastery(state, isAllBlocks, activeTopics) {
-        const topicBody = document.getElementById('topic-list-body');
-        if (!topicBody) return;
 
-        if (isAllBlocks) {
-            // Grouped Rendering for All Blocks
-            const groupedHtml = state.blocks.map(block => {
-                const blockTopics = activeTopics.filter(t => t.blockId === block.id);
-                if (blockTopics.length === 0) return '';
-                
-                // Sort by Mi inside the block
-                const sorted = blockTopics.sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
-                const rows = sorted.map(t => renderTopicRow(t)).join('');
-
-                return `
-                    <tr class="bg-slate-100/80 border-y border-slate-200">
-                        <td colspan="4" class="px-6 py-2 text-xs font-bold text-slate-500 uppercase tracking-widest">${block.name}</td>
-                    </tr>
-                    ${rows}
-                `;
-            }).join('');
-            
-            // Handle Orphaned Topics (deleted blocks)
-            const orphaned = activeTopics.filter(t => !state.blocks.find(b => b.id === t.blockId));
-            let orphanedHtml = '';
-            if (orphaned.length > 0) {
-                 orphanedHtml = `
-                    <tr class="bg-red-50 border-y border-red-100">
-                        <td colspan="4" class="px-6 py-2 text-xs font-bold text-red-500 uppercase tracking-widest">Unassigned / Orphaned</td>
-                    </tr>` + orphaned.map(t => renderTopicRow(t)).join('');
-            }
-
-            topicBody.innerHTML = groupedHtml + orphanedHtml || '<tr><td colspan="4" class="text-center py-8 text-slate-400 italic">No topics found.</td></tr>';
-
-        } else {
-            // Standard Single Block Rendering
-            const sortedTopics = [...activeTopics].sort((a,b) => getTopicStats(a.id).mi - getTopicStats(b.id).mi);
-            topicBody.innerHTML = sortedTopics.map(t => renderTopicRow(t)).join('') || '<tr><td colspan="4" class="text-center py-8 text-slate-400 italic">No topics found.</td></tr>';
-        }
-    }
-
-    /**
-     * Renders a single lecture card for the catalog.
-     */
-    function renderLectureCard(lecture, state) {
-        return `
-            <div class="bg-white p-4 rounded-2xl border border-slate-100 card-shadow relative group ${lecture.ingested ? 'opacity-60 grayscale-[0.5]' : ''}">
-                <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button data-id="${lecture.id}" class="edit-lecture-btn text-indigo-400 hover:text-indigo-600 text-[10px] font-bold">EDIT</button>
-                    <button data-id="${lecture.id}" class="delete-lecture-btn text-red-300 hover:text-red-500">×</button>
-                </div>
-                <div class="flex items-start gap-2 pr-12">
-                    ${lecture.ingested ? '<span class="text-emerald-500 font-bold text-lg">✓</span>' : ''}
-                    <div>
-                        <p class="font-bold text-slate-800 ${lecture.ingested ? 'line-through decoration-emerald-500/50' : ''}">${lecture.title}</p>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase">${lecture.date}</p>
-                    </div>
-                </div>
-                <div class="mt-3 flex flex-wrap gap-1">${lecture.topics.map(tid => {
-                    const t = state.topics.find(topic => topic.id === tid);
-                    return t ? `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold">${t.name}</span>` : '';
-                }).join('')}</div>
-            </div>
-        `;
-    }
-
-    /**
-     * Renders the Lecture Catalog view with filtering and sorting.
-     */
-    function renderLectureCatalog(state, activeTopics, activeLectures) {
-        const topicFilter = document.getElementById('lecture-topic-filter');
-        if (!topicFilter) return;
-
-        const filterVal = topicFilter.value;
-        topicFilter.innerHTML = '<option value="all">All Topics</option>' + activeTopics.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-        topicFilter.value = filterVal; // Restore selection if valid
-
-        const sortMode = document.getElementById('lecture-sort').value;
-        const searchQuery = document.getElementById('lecture-search').value.toLowerCase();
-        
-        let filteredLectures = [...activeLectures];
-        
-        // Search Filter
-        if (searchQuery) {
-            filteredLectures = filteredLectures.filter(l => {
-                const inTitle = l.title.toLowerCase().includes(searchQuery);
-                const relatedTopics = l.topics.map(tid => state.topics.find(t => t.id === tid)).filter(Boolean);
-                const inTopics = relatedTopics.some(t => t.name.toLowerCase().includes(searchQuery));
-                const inTags = relatedTopics.some(t => (t.tags || []).some(tag => tag.toLowerCase().includes(searchQuery)));
-                return inTitle || inTopics || inTags;
-            });
-        }
-
-        if (topicFilter.value !== 'all' && topicFilter.value !== '') filteredLectures = filteredLectures.filter(l => l.topics.includes(topicFilter.value));
-        if (document.getElementById('lecture-start-date').value) filteredLectures = filteredLectures.filter(l => l.date >= document.getElementById('lecture-start-date').value);
-        if (document.getElementById('lecture-end-date').value) filteredLectures = filteredLectures.filter(l => l.date <= document.getElementById('lecture-end-date').value);
-        
-        filteredLectures.sort((a, b) => {
-            if (sortMode === 'date-desc') return new Date(b.date) - new Date(a.date);
-            if (sortMode === 'date-asc') return new Date(a.date) - new Date(b.date);
-            if (sortMode === 'title-asc') return a.title.localeCompare(b.title);
-            return b.title.localeCompare(a.title);
-        });
-
-        const grid = document.getElementById('lecture-grid');
-        if (grid) {
-            grid.innerHTML = filteredLectures.map(l => renderLectureCard(l, state)).join('') ||
-                '<p class="text-slate-400 text-center col-span-full py-10 italic">No matching lectures found.</p>';
-        }
-    }
-
-    /**
-     * Renders the Ingestion Checklist.
-     */
-    function renderChecklist(state, lectures) {
-        const checklistBody = document.getElementById('checklist-body');
-        if (!checklistBody) return;
-
-        checklistBody.innerHTML = [...lectures].sort((a, b) => new Date(b.date) - new Date(a.date)).map(l => {
-            const topicBadges = l.topics.map(tid => {
-                const topic = state.topics.find(t => t.id === tid);
-                return topic ? `<span class="bg-indigo-50 text-indigo-600 text-[10px] px-2 py-0.5 rounded mr-1">${topic.name}</span>` : '';
-            }).join('');
-            return `<tr class="${l.ingested ? 'ingested-row' : ''} transition-all">
-                <td class="px-6 py-4 text-center">
-                    <input type="checkbox" ${l.ingested ? 'checked' : ''} data-id="${l.id}" class="toggle-ingested-check w-5 h-5 cursor-pointer text-blue-600 rounded">
-                </td>
-                <td class="px-6 py-4 font-bold text-slate-800 ${l.ingested ? 'ingested-text' : ''}">${l.title}</td>
-                <td class="px-6 py-4">${topicBadges}</td>
-                <td class="px-6 py-4 text-right text-xs text-slate-400 font-mono">${l.date}</td>
-            </tr>`;
-        }).join('') || '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">No lectures found.</td></tr>';
-    }
-
-    /**
-     * Renders a single row in the pass history table.
-     */
-    function renderPassRow(pass, topicName) {
-        const mi = ((0.7 * pass.sp3) + (0.3 * pass.quiz)).toFixed(2);
-        return `
-            <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-6 py-3 text-xs text-slate-500 whitespace-nowrap">${pass.date}</td>
-                <td class="px-6 py-3 text-xs font-bold text-slate-800">${topicName}</td>
-                <td class="text-center text-xs font-medium whitespace-nowrap">${pass.sp3} / ${pass.quiz}</td>
-                <td class="text-center text-xs font-bold text-indigo-600">${mi}</td>
-                <td class="px-6 py-3 text-[11px] text-slate-500 max-w-xs italic break-words">${pass.note || '—'}</td>
-                <td class="text-right px-6 space-x-2 whitespace-nowrap">
-                    <button data-id="${pass.id}" class="edit-pass-btn text-indigo-300 hover:text-indigo-600 text-[10px] font-bold uppercase">Edit</button>
-                    <button data-id="${pass.id}" class="delete-pass-btn text-red-200 hover:text-red-500 text-[10px] font-bold uppercase">Del</button>
-                </td>
-            </tr>
-        `;
-    }
-
-    /**
-     * Renders the Pass History view.
-     */
-    function renderPassHistory(state, activeTopics) {
-        const activeTopicIds = new Set(activeTopics.map(t => t.id));
-        const activePasses = state.passes.filter(p => activeTopicIds.has(p.topicId));
-        const historyBody = document.getElementById('history-list-body');
-
-        if (!historyBody) return;
-
-        historyBody.innerHTML = activePasses.sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => {
-            const topic = state.topics.find(t => t.id === p.topicId);
-            return renderPassRow(p, topic ? topic.name : 'Unknown');
-        }).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">No history available.</td></tr>';
-    }
-
-    /**
-     * Renders the Priority Sidebar.
-     */
-    function renderPrioritySidebar(state, activeTopics) {
-        const priorities = calculatePriority(state, activeTopics);
-        const container = document.getElementById('priority-topic');
-
-        if (!container) return;
-
-        if (priorities.length === 0) {
-             container.innerHTML = `<span class="text-xs uppercase font-bold opacity-70">Add topics to begin</span>`;
-             return;
-        }
-
-        container.innerHTML = `<div class="space-y-2 max-h-[400px] overflow-y-auto custom-scroll -mr-1 pr-1">` +
-            priorities.map((p, index) => `
-                <div class="bg-black/20 rounded-lg p-2.5 flex justify-between items-center group hover:bg-black/30 transition-colors">
-                    <div class="flex items-center gap-3 min-w-0 flex-1 mr-3">
-                        <span class="text-xs font-black text-indigo-300 w-4 text-center">${index + 1}</span>
-                        <div class="min-w-0">
-                            <p class="text-[9px] uppercase font-bold text-indigo-200 tracking-wider truncate mb-0.5">${p.topic.subject || 'General'}</p>
-                            <p class="text-xs font-bold text-white truncate group-hover:whitespace-normal leading-tight" title="${p.topic.name}">${p.topic.name}</p>
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <span class="block text-sm font-bold ${p.mi < 7 ? 'text-red-300' : 'text-emerald-300'} leading-none">${p.mi.toFixed(1)}</span>
-                    </div>
-                </div>
-            `).join('') + `</div>`;
-    }
-
-    /**
-     * Updates the top-level stats and goal progress bar.
-     */
-    function renderGlobalStats(state, activeBlock, isAllBlocks, activeTopics, activeLectures) {
-        const mh = calculateMh(activeTopics);
-        document.getElementById('mh-value').innerText = mh;
-
-        const targetDisplay = document.getElementById('mh-target-display');
-        const progressContainer = document.getElementById('goal-progress-container');
-        const progressBar = document.getElementById('goal-progress-bar');
-        const progressPercent = document.getElementById('goal-percent');
-        const statusText = document.getElementById('goal-status-text');
-
-        if (!isAllBlocks && activeBlock && activeBlock.masteryGoal > 0) {
-            targetDisplay.innerText = `/ ${activeBlock.masteryGoal}`;
-            progressContainer.classList.remove('hidden');
-            const percent = Math.min(100, Math.round((mh / activeBlock.masteryGoal) * 100));
-            progressBar.style.width = `${percent}%`;
-            progressPercent.innerText = `${percent}%`;
-            statusText.innerText = percent >= 100 ? "Goal Met." : `${(activeBlock.masteryGoal - mh).toFixed(2)} points to go.`;
-        } else {
-            targetDisplay.innerText = isAllBlocks ? "(Global)" : "";
-            progressContainer.classList.add('hidden');
-        }
-
-        const ingestedCount = activeLectures.filter(l => l.ingested).length;
-        document.getElementById('ingestion-count').innerText = `${ingestedCount} / ${activeLectures.length}`;
-        document.getElementById('mastered-count').innerText = `${activeTopics.filter(t => getTopicStats(t.id).mi >= 7).length} / ${activeTopics.length}`;
-    }
-
-    /**
-     * Updates the block selector dropdown and visibility of action buttons.
-     */
-    function renderBlockControls(state, activeBlock, isAllBlocks) {
-        const selector = document.getElementById('block-selector');
-        if (selector) {
-            selector.innerHTML =
-                `<option value="all" ${isAllBlocks ? 'selected' : ''}>All Blocks (Longitudinal)</option>` +
-                state.blocks.map(b => `<option value="${b.id}" ${b.id === state.activeBlockId ? 'selected' : ''}>${b.name}</option>`).join('') +
-                '<option value="new_block_action" class="font-bold text-indigo-600">+ New Block...</option>';
-        }
-
-        const addBtns = ['add-topic-btn', 'add-lecture-btn', 'log-new-pass-btn', 'set-goal-btn', 'rename-block-btn'];
-        addBtns.forEach(id => {
-            const el = document.getElementById(id);
-            if(el) isAllBlocks ? el.classList.add('hidden') : el.classList.remove('hidden');
-        });
-    }
 
     function render() {
         const isAllBlocks = state.activeBlockId === 'all';
         const activeBlock = isAllBlocks ? null : getActiveBlock();
-
+        
         const activeTopics = isAllBlocks ? state.topics : state.topics.filter(t => t.blockId === state.activeBlockId);
         const activeLectures = isAllBlocks ? state.lectures : state.lectures.filter(l => l.blockId === state.activeBlockId);
+        
+        const mh = calculateMh(activeTopics);
+        const ingestedCount = activeLectures.filter(l => l.ingested).length;
+        const masteredCount = activeTopics.filter(t => getTopicStats(t.id).mi >= 7).length;
 
-        // Orchestrate sub-component rendering
-        renderGlobalStats(state, activeBlock, isAllBlocks, activeTopics, activeLectures);
-        renderBlockControls(state, activeBlock, isAllBlocks);
-        updateNavigationUI(state.activeViewId);
-        renderPrioritySidebar(state, activeTopics);
+        // Reactive update to components
+        const statsEl = document.getElementById('mastery-stats');
+        if (statsEl) statsEl.data = {
+            mh,
+            target: activeBlock ? activeBlock.masteryGoal : (isAllBlocks ? "Global" : "0.0"),
+            ingestion: `${ingestedCount} / ${activeLectures.length}`,
+            mastered: `${masteredCount} / ${activeTopics.length}`
+        };
 
-        renderTopicMastery(state, isAllBlocks, activeTopics);
-        renderChecklist(state, activeLectures);
-        renderLectureCatalog(state, activeTopics, activeLectures);
-        renderPassHistory(state, activeTopics);
+        const controls = document.getElementById('block-controls');
+        if (controls) controls.data = { blocks: state.blocks, activeBlockId: state.activeBlockId, isAllBlocks };
+
+        const navEl = document.getElementById('app-navigation');
+        if (navEl) navEl.setAttribute('active-view', state.activeViewId);
+        document.querySelectorAll('.view').forEach(el => el.classList.toggle('hidden', el.id !== 'view-' + state.activeViewId));
+
+        const priorities = calculatePriority(state, activeTopics);
+        const sidebar = document.getElementById('priority-sidebar');
+        if (sidebar) sidebar.data = priorities[0];
+
+        const dashboard = document.getElementById('view-dashboard');
+        if (dashboard) dashboard.data = { state, activeTopics, isAllBlocks };
+
+        const checklist = document.getElementById('view-checklist');
+        if (checklist) checklist.data = { state, lectures: activeLectures };
+
+        const lectures = document.getElementById('view-lectures');
+        if (lectures) lectures.data = { state, lectures: activeLectures, activeTopics, isAllBlocks };
+
+        const history = document.getElementById('view-history');
+        if (history) history.data = { state, activeTopics, isAllBlocks };
     }
 
     // --- PRIORITY LOGIC ---
@@ -1646,68 +1862,10 @@ function handleBlockSubmit(e) {
 
 
     function setupEventListeners() {
-        // Block Selector
-        const blockSelector = document.getElementById('block-selector');
-        if (blockSelector) {
-            blockSelector.addEventListener('change', handleBlockChange);
-        }
-        document.getElementById('rename-block-btn').addEventListener('click', renameActiveBlock);
-
-        document.querySelector('#set-goal-btn').addEventListener('click', () => toggleModal('goal-modal'));
+        // Toolbar
         document.getElementById('export-data-btn').addEventListener('click', exportData);
         document.getElementById('clear-all-data-btn').addEventListener('click', clearAllData);
         document.getElementById('import-input-field').addEventListener('change', importData);
-
-        document.getElementById('main-nav').addEventListener('click', (e) => {
-            const target = e.target.closest('.nav-link');
-            if (target) {
-                const viewId = target.id.replace('nav-', '');
-                switchView(viewId);
-            }
-        });
-
-        // Dashboard delegation
-        document.getElementById('add-topic-btn').addEventListener('click', () => toggleModal('topic-modal'));
-        document.getElementById('topic-list-body').addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-topic-btn')) {
-                deleteTopic(e.target.dataset.id);
-            } else if (e.target.classList.contains('edit-topic-btn')) {
-                openEditTopic(e.target.dataset.id);
-            }
-        });
-
-        // Checklist delegation
-        document.getElementById('checklist-body').addEventListener('change', (e) => {
-            if (e.target.classList.contains('toggle-ingested-check')) {
-                toggleIngested(e.target.dataset.id);
-            }
-        });
-
-        // Lectures delegation
-        document.getElementById('add-lecture-btn').addEventListener('click', () => toggleModal('lecture-modal'));
-        document.getElementById('lecture-search').addEventListener('input', render);
-        document.getElementById('lecture-sort').addEventListener('change', render);
-        document.getElementById('lecture-topic-filter').addEventListener('change', render);
-        document.getElementById('lecture-start-date').addEventListener('change', render);
-        document.getElementById('lecture-end-date').addEventListener('change', render);
-        document.getElementById('reset-lecture-filters-btn').addEventListener('click', resetLectureFilters);
-        document.getElementById('lecture-grid').addEventListener('click', (e) => {
-            if (e.target.classList.contains('edit-lecture-btn')) {
-                openEditLecture(e.target.dataset.id);
-            } else if (e.target.classList.contains('delete-lecture-btn')) {
-                deleteLecture(e.target.dataset.id);
-            }
-        });
-
-        // History delegation
-        document.getElementById('log-new-pass-btn').addEventListener('click', () => toggleModal('pass-modal'));
-        document.getElementById('history-list-body').addEventListener('click', (e) => {
-            if (e.target.classList.contains('edit-pass-btn')) {
-                openEditPass(e.target.dataset.id);
-            } else if (e.target.classList.contains('delete-pass-btn')) {
-                deletePass(e.target.dataset.id);
-            }
-        });
 
         // Forms
         document.getElementById('add-topic-form').addEventListener('submit', handleTopicSubmit);
@@ -1717,14 +1875,13 @@ function handleBlockSubmit(e) {
         document.getElementById('add-block-form').addEventListener('submit', handleBlockSubmit);
         document.getElementById('log-lecture-form').addEventListener('submit', handleLogLectureSubmit);
 
-        // Cancel Buttons
+        // Modals & Cancel Buttons
         document.getElementById('cancel-topic-modal').addEventListener('click', () => toggleModal('topic-modal'));
         document.getElementById('cancel-lecture-modal').addEventListener('click', () => toggleModal('lecture-modal'));
         document.getElementById('cancel-pass-modal').addEventListener('click', () => toggleModal('pass-modal'));
         document.getElementById('cancel-goal-modal').addEventListener('click', () => toggleModal('goal-modal'));
         document.getElementById('cancel-block-modal').addEventListener('click', () => toggleModal('block-modal'));
         document.getElementById('cancel-log-lecture-modal').addEventListener('click', () => toggleModal('log-lecture-modal'));
-        document.getElementById('log-lecture-btn').addEventListener('click', openLogLecture);
 
         // Bulk Log Events
         const bulkLogBtn = document.getElementById('bulk-log-btn');
