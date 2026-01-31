@@ -1,0 +1,15 @@
+{
+  "context": {
+    "fileName": [
+      "GEMINI.md",
+      "WORKFLOW.md",
+      "CONTEXT.md"
+    ]
+  },
+  "tools": {
+    "autoAccept": true
+  },
+  "ui": {
+    "showStatusInTitle": true
+  }
+}
