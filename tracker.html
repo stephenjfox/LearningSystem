@@ -448,7 +448,9 @@
                             <p class="text-3xl font-bold text-indigo-600">${this._data.mh}</p>
                             <p class="text-xs font-bold text-slate-300">/ ${this._data.target}</p>
                         </div>
+                        ${this._data.isAllBlocks ? '' : `
                         <button onclick="openGoalModal()" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-indigo-400 hover:text-indigo-600 uppercase">Set Goal</button>
+                        `}
                     </div>
                     <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 min-w-[140px]">
                         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lecture Coverage</p>
@@ -485,7 +487,14 @@
             this._isAllBlocks = isAllBlocks;
             this.render();
         }
-        connectedCallback() { this.render(); }
+        connectedCallback() {
+            this.render();
+            this.addEventListener('change', (e) => {
+                if (e.target.tagName === 'SELECT') {
+                    handleBlockChange(e);
+                }
+            });
+        }
         render() {
             if (!this._blocks) return;
             const options = `<option value="all" ${this._isAllBlocks ? 'selected' : ''}>All Blocks (Longitudinal)</option>` +
@@ -494,15 +503,10 @@
 
             this.innerHTML = `
                 <div class="flex items-center gap-2">
-                    <div class="relative min-w-[220px]">
-                        <select onchange="handleBlockChange(this.value)" class="w-full bg-white border border-slate-200 pl-4 pr-10 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm">
-                            ${options}
-                        </select>
-                        <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                    </div>
-                    <button onclick="openRenameBlock()" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors ${this._isAllBlocks ? 'hidden' : ''}" title="Rename Block">
+                    <select class="bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm min-w-[220px]">
+                        ${options}
+                    </select>
+                    <button onclick="renameActiveBlock()" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors ${this._isAllBlocks ? 'hidden' : ''}" title="Rename Block">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                     </button>
                 </div>
@@ -742,7 +746,7 @@
                 if (btn.classList.contains('delete-lecture-btn')) deleteLecture(btn.dataset.id);
             });
             this.addEventListener('input', (e) => {
-                if (e.target.id === 'lecture-search' || e.target.id === 'lecture-sort' || e.target.id === 'lecture-topic-filter') {
+                if (['lecture-search', 'lecture-sort', 'lecture-topic-filter', 'lecture-date-from', 'lecture-date-to'].includes(e.target.id)) {
                     this.renderGrid();
                 }
             });
@@ -753,11 +757,11 @@
                                (this._activeTopics || []).map(t => `<option value="${t.id}">${t.name}</option>`).join('');
 
             this.innerHTML = `
-                <div class="flex justify-between items-center">
+                <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold">Lecture Catalog</h2>
                     <button onclick="openAddLecture()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold ${this._isAllBlocks ? 'hidden' : ''}">Add Lecture</button>
                 </div>
-                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex flex-wrap gap-4 items-end">
+                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex flex-wrap gap-4 items-end mb-6">
                     <div class="flex-1 min-w-[200px]">
                         <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Search Lectures</label>
                         <input type="text" id="lecture-search" placeholder="Search title or topics..." class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500">
@@ -776,6 +780,16 @@
                             ${topicOptions}
                         </select>
                     </div>
+                    <div class="flex gap-4">
+                        <div class="min-w-[130px]">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">From Date</label>
+                            <input type="date" id="lecture-date-from" class="w-full bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm">
+                        </div>
+                        <div class="min-w-[130px]">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">To Date</label>
+                            <input type="date" id="lecture-date-to" class="w-full bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm">
+                        </div>
+                    </div>
                     <button onclick="resetLectureFilters()" class="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase">Reset</button>
                 </div>
                 <div id="lecture-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
@@ -788,12 +802,19 @@
             const search = this.querySelector('#lecture-search').value.toLowerCase();
             const sort = this.querySelector('#lecture-sort').value;
             const topicFilter = this.querySelector('#lecture-topic-filter').value;
+            const dateFrom = this.querySelector('#lecture-date-from').value;
+            const dateTo = this.querySelector('#lecture-date-to').value;
 
             let filtered = this._lectures.filter(l => {
                 const matchesSearch = l.title.toLowerCase().includes(search) ||
                                     l.topics.some(tid => this._state.topics.find(t => t.id === tid)?.name.toLowerCase().includes(search));
                 const matchesTopic = topicFilter === 'all' || l.topics.includes(topicFilter);
-                return matchesSearch && matchesTopic;
+
+                const lectureDate = new Date(l.date);
+                const matchesDateFrom = !dateFrom || lectureDate >= new Date(dateFrom);
+                const matchesDateTo = !dateTo || lectureDate <= new Date(dateTo);
+
+                return matchesSearch && matchesTopic && matchesDateFrom && matchesDateTo;
             });
 
             filtered.sort((a, b) => {
@@ -1643,7 +1664,7 @@
 
     // Updated Handlers to use toggleModal
     function handleBlockChange(e) {
-        const val = e.target.value;
+        const val = e.target ? e.target.value : e;
         if (val === 'new_block_action') {
             toggleModal('block-modal');
             e.target.value = state.activeBlockId; 
@@ -1746,6 +1767,14 @@ function handleBlockSubmit(e) {
         render();
     }
 
+    function openGoalModal() {
+        const block = getActiveBlock();
+        if (block) {
+            document.getElementById('goal-mh-target').value = block.masteryGoal || 0;
+            toggleModal('goal-modal');
+        }
+    }
+
     function handleGoalSubmit(e) {
         e.preventDefault();
         const block = getActiveBlock();
@@ -1795,8 +1824,8 @@ function handleBlockSubmit(e) {
         document.getElementById('lecture-search').value = "";
         document.getElementById('lecture-sort').value = "date-desc";
         document.getElementById('lecture-topic-filter').value = "all";
-        document.getElementById('lecture-start-date').value = "";
-        document.getElementById('lecture-end-date').value = "";
+        document.getElementById('lecture-date-from').value = "";
+        document.getElementById('lecture-date-to').value = "";
         render();
     }
 
@@ -1823,7 +1852,8 @@ function handleBlockSubmit(e) {
             mh,
             target: activeBlock ? activeBlock.masteryGoal : (isAllBlocks ? "Global" : "0.0"),
             ingestion: `${ingestedCount} / ${activeLectures.length}`,
-            mastered: `${masteredCount} / ${activeTopics.length}`
+            mastered: `${masteredCount} / ${activeTopics.length}`,
+            isAllBlocks
         };
 
         const controls = document.getElementById('block-controls');
