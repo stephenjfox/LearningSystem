@@ -547,20 +547,26 @@
     class PrioritySidebar extends HTMLElement {
         set data(priority) {
             this._priority = priority;
+            this._isArray = Array.isArray(priority);
             this.render();
         }
         connectedCallback() { this.render(); }
-        render() {
-            const content = this._priority ? `
+        _renderElement(priorityObject) {
+            return `
                 <div class="bg-white/10 rounded-xl p-3 border border-white/20">
-                    <p class="text-[10px] uppercase font-bold text-indigo-200 mb-1">${this._priority.topic.subject || 'General'}</p>
-                    <p class="text-sm font-bold text-white mb-2 leading-tight">${this._priority.topic.name}</p>
+                    <p class="text-[10px] uppercase font-bold text-indigo-200 mb-1">${priorityObject.topic.subject || 'General'}</p>
+                    <p class="text-sm font-bold text-white mb-2 leading-tight">${priorityObject.topic.name}</p>
                     <div class="flex justify-between items-center">
-                        <span class="text-xs font-medium text-indigo-200 italic">Mh: ${this._priority.mi.toFixed(1)}</span>
-                        <button onclick="openLogPassForTopic('${this._priority.topic.id}')" class="text-[10px] bg-white text-indigo-600 px-2 py-1 rounded font-black uppercase">LOG</button>
+                        <span class="text-xs font-medium text-indigo-200 italic">Mh: ${priorityObject.mi.toFixed(1)}</span>
+                        <button onclick="openLogPassForTopic('${priorityObject.topic.id}')" class="text-[10px] bg-white text-indigo-600 px-2 py-1 rounded font-black uppercase">LOG</button>
                     </div>
                 </div>
-            ` : '<div class="bg-white/10 rounded-xl p-3 border border-white/20"><span class="text-xs uppercase font-bold opacity-70">Add topics to begin</span></div>';
+            `
+        }
+        render() {
+            const content = this._priority ? (
+                this._isArray ? this._priority.map(this._renderElement).join("<br/>") : this._renderElement(this._priority)
+            ) : '<div class="bg-white/10 rounded-xl p-3 border border-white/20"><span class="text-xs uppercase font-bold opacity-70">Add topics to begin</span></div>';
 
             this.innerHTML = `
                 <div class="bg-indigo-600 rounded-2xl p-6 text-white card-shadow">
@@ -1865,7 +1871,7 @@ function handleBlockSubmit(e) {
 
         const priorities = calculatePriority(state, activeTopics);
         const sidebar = document.getElementById('priority-sidebar');
-        if (sidebar) sidebar.data = priorities[0];
+        if (sidebar) sidebar.data = priorities;
 
         const dashboard = document.getElementById('view-dashboard');
         if (dashboard) dashboard.data = { state, activeTopics, isAllBlocks };
@@ -1881,7 +1887,7 @@ function handleBlockSubmit(e) {
     }
 
     // --- PRIORITY LOGIC ---
-    function calculatePriority(state, activeTopics) {
+    function calculatePriority(state, activeTopics, nSubjects = 5) {
         // Implementation of Harmonic Mean Priority Queue
         
         if (activeTopics.length === 0) return [];
@@ -1910,7 +1916,7 @@ function handleBlockSubmit(e) {
         const priorities = Object.values(bestPerSubject).sort((a, b) => a.mi - b.mi);
 
         // 3. Return top 3 unique subjects
-        return priorities; //.slice(0, 3);
+        return priorities.slice(0, nSubjects);
     }
 
 
