@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased] - 2026-02-14
+
+### Added
+- **JSON Lecture Import Wizard:** A multi-step workflow for bulk importing lectures.
+    - Step 1: JSON payload parsing.
+    - Step 2: Interactive tagging UI with responsive Table (Desktop) and Card (Mobile) views.
+    - Quick Actions bar for bulk subject/topic application.
+    - Support for dynamic subject creation and pending topic registration.
+    - Step 3: Final review of lectures and new topics.
+- **Priority Maxing:** Refined priority triage logic to "Max" subjects with unmastered topics.
+    - Subjects containing any topic below the D-Min (7.0) threshold are now hoisted to the top of the priority queue.
+- **Mobile Navigation:**
+    - Implemented a collapsible hamburger menu for mobile devices.
+    - Added a slide-in sidebar drawer with a backdrop overlay.
+    - Integrated automatic sidebar closing into the `switchView` workflow.
+
+### Fixed
+- **UI:** Fixed a logic gap where the Batch Apply button in the Import Wizard could not find the target selects due to missing IDs.
+
 ## [Unreleased] - 2026-01-08
 
 ### Added

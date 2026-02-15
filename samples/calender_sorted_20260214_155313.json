@@ -1,0 +1,434 @@
+[
+    {
+        "lecture_name": "Intro to Brain and Behavior",
+        "lecturer_name": "Daniels, Theyel",
+        "description": "",
+        "start": "2026-02-17T14:00:00+00:00",
+        "end": "2026-02-17T14:30:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Intro to Mental Status and Psychiatric Exam",
+        "lecturer_name": "Daniels, Theyel",
+        "description": "",
+        "start": "2026-02-17T14:30:00+00:00",
+        "end": "2026-02-17T15:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "**ILM: Neurobiology & Psychiatry Part I",
+        "lecturer_name": "Halt",
+        "description": "",
+        "start": "2026-02-17T15:30:00+00:00",
+        "end": "2026-02-17T16:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Doctoring Didactic Session #7:  Clinical Skills Practice",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-17T18:00:00+00:00",
+        "end": "2026-02-17T21:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "PC-PM Only: Research Methods",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-18T13:00:00+00:00",
+        "end": "2026-02-18T14:00:00+00:00",
+        "location": "270"
+    },
+    {
+        "lecture_name": "Psychiatry & Psychotherapy",
+        "lecturer_name": "Hartselle",
+        "description": "",
+        "start": "2026-02-18T14:00:00+00:00",
+        "end": "2026-02-18T15:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Memory Systems",
+        "lecturer_name": "Collier",
+        "description": "",
+        "start": "2026-02-18T15:30:00+00:00",
+        "end": "2026-02-18T16:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Lunch & Be",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-18T17:00:00+00:00",
+        "end": "2026-02-18T18:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Child & Adolescent Development and Psychiatry Part 1",
+        "lecturer_name": "Lowenhaup, Egolf",
+        "description": "",
+        "start": "2026-02-18T18:00:00+00:00",
+        "end": "2026-02-18T19:10:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Child & Adolescent Development and Psychiatry Part 2",
+        "lecturer_name": "Lowenhaup, Egolf",
+        "description": "",
+        "start": "2026-02-18T19:20:00+00:00",
+        "end": "2026-02-18T20:35:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "**ILM: Watch Boards & Beyond minutes 0-9:45 Psychiatry Folder > \"Conditioning and Transference\" for background on classical and operant conditioning BEFORE Anxiety/OCD lecture on Fri 2/20",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-18T20:45:00+00:00",
+        "end": "2026-02-18T21:30:00+00:00",
+        "location": "Boards and Beyond Video (9:45min) Conditioning and Transference"
+    },
+    {
+        "lecture_name": "Doctoring: EHR Module #2 Due by 6 pm",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-18T23:00:00+00:00",
+        "end": "2026-02-19T00:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "PC-PM Only: Research Methods",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-19T13:00:00+00:00",
+        "end": "2026-02-19T14:00:00+00:00",
+        "location": "160"
+    },
+    {
+        "lecture_name": "**ILM: Neurobiology of Stress & Trauma",
+        "lecturer_name": "Daniels",
+        "description": "",
+        "start": "2026-02-19T14:00:00+00:00",
+        "end": "2026-02-19T15:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "PTSD: Symptoms, Presentation, and Treatment",
+        "lecturer_name": "D'Avanzato",
+        "description": "",
+        "start": "2026-02-19T15:10:00+00:00",
+        "end": "2026-02-19T16:40:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Doctoring: OSCE Practice, EHR, Firearm Screening Session",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-19T18:00:00+00:00",
+        "end": "2026-02-19T22:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "PC-PM Only: Research Methods",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-20T13:00:00+00:00",
+        "end": "2026-02-20T14:00:00+00:00",
+        "location": "160"
+    },
+    {
+        "lecture_name": "Anxiety, Obsessive-Compulsive, and Related Disorders: Clinical Presentation",
+        "lecturer_name": "Kaiser; Chiappone; Kulak",
+        "description": "",
+        "start": "2026-02-20T14:00:00+00:00",
+        "end": "2026-02-20T14:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Anxiety, Obsessive-Compulsive, and Related Disorders:",
+        "lecturer_name": "Neurobiology",
+        "description": "",
+        "start": "2026-02-20T15:00:00+00:00",
+        "end": "2026-02-20T15:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Anxiety, Obsessive-Compulsive, and Related Disorders: Treatment",
+        "lecturer_name": "Kaiser; Chiappone; Kulak",
+        "description": "",
+        "start": "2026-02-20T16:00:00+00:00",
+        "end": "2026-02-20T16:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "IMS-II Exam 2 Review Session",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-20T17:00:00+00:00",
+        "end": "2026-02-20T17:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "**ILM: Clinical Neurochemistry  Modules",
+        "lecturer_name": "Neurobio & Psychiatry Part 2",
+        "description": "Clinical Neurochem Part 1 (46 mins)\nClinical Neurochem Part 2 (31 mins)",
+        "start": "2026-02-20T18:00:00+00:00",
+        "end": "2026-02-20T19:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "INPP Session",
+        "lecturer_name": "Virtual",
+        "description": "Interdisciplinary Navigation Partnership Program workshop and debrief<br>Zoom link: (<a href=\"https://ri-college.zoom.us/my/megan.smith?pwd=T2J0TzNpL0J4M0FYdWV6TmVlaWlpQT09\" target=\"_blank\">https://ri-college.zoom.us/<wbr />my/megan.smith?pwd=<wbr />T2J0TzNpL0J4M0FYdWV6TmVlaWlpQT<wbr />09</a>",
+        "start": "2026-02-20T21:00:00+00:00",
+        "end": "2026-02-20T22:00:00+00:00",
+        "location": "TBD"
+    },
+    {
+        "lecture_name": "Mood Disorders I",
+        "lecturer_name": "Hunt, Pribble, Affleck",
+        "description": "",
+        "start": "2026-02-23T14:00:00+00:00",
+        "end": "2026-02-23T15:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Mood Disorders II",
+        "lecturer_name": "Hunt, Pribble, Affleck",
+        "description": "",
+        "start": "2026-02-23T15:10:00+00:00",
+        "end": "2026-02-23T16:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Mood Disorders III Suicide: Prevention, Assessment, Treatment",
+        "lecturer_name": "Hunt, Pribble, Affleck",
+        "description": "",
+        "start": "2026-02-23T16:10:00+00:00",
+        "end": "2026-02-23T17:10:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Gender/Sex and Psychiatry",
+        "lecturer_name": "Rafferty",
+        "description": "",
+        "start": "2026-02-23T18:00:00+00:00",
+        "end": "2026-02-23T18:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Independent Study",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-23T19:00:00+00:00",
+        "end": "2026-02-23T22:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Eating Disorders",
+        "lecturer_name": "Cueto",
+        "description": "",
+        "start": "2026-02-24T14:00:00+00:00",
+        "end": "2026-02-24T15:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Substance Use Disorder I - Overview",
+        "lecturer_name": "Baill",
+        "description": "",
+        "start": "2026-02-24T15:30:00+00:00",
+        "end": "2026-02-24T16:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Doctoring OSCE#3",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-24T17:00:00+00:00",
+        "end": "2026-02-24T22:30:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "REQ: Sim Session #1: Anxiety, Mood, & Trauma-based Disorders",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-25T14:00:00+00:00",
+        "end": "2026-02-25T15:45:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Substance Use Disorders II: Alcohol - Clinical Presentation, Neurobiology, and Treatment",
+        "lecturer_name": "Swift",
+        "description": "",
+        "start": "2026-02-25T16:00:00+00:00",
+        "end": "2026-02-25T17:10:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Substance Use Disorder III: Clinical Pearls, Toxidromes",
+        "lecturer_name": "Hartselle",
+        "description": "",
+        "start": "2026-02-25T18:00:00+00:00",
+        "end": "2026-02-25T19:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Neuropath - Neurodegenerative",
+        "lecturer_name": "Punsoni",
+        "description": "",
+        "start": "2026-02-25T19:30:00+00:00",
+        "end": "2026-02-25T20:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Psychosis: Clinical Presentation",
+        "lecturer_name": "C. Harrington",
+        "description": "",
+        "start": "2026-02-26T14:00:00+00:00",
+        "end": "2026-02-26T15:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Psychosis: Neurobiological/Pharmacological Aspects of Treatment",
+        "lecturer_name": "Theyel",
+        "description": "",
+        "start": "2026-02-26T15:30:00+00:00",
+        "end": "2026-02-26T16:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Doctoring: Community Mentor #3",
+        "lecturer_name": "Unknown",
+        "description": "CSS ",
+        "start": "2026-02-26T18:00:00+00:00",
+        "end": "2026-02-26T22:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Personality Disorders",
+        "lecturer_name": "Hartselle",
+        "description": "<u><b>First Aid 2020</b></u><br><b>\u00c3\u0082\u00c2\u00a0</b>pp. 565-566\u00c3\u0082\u00c2\u00a0\u00c3\u0082\u00c2\u00a0<br><b></b><br><u><b>First Aid 2021</b></u><br>pp. 588-589<br><b></b><br><u><b>Boards &amp; Beyond</b></u><br>Psychiatry &gt; Pathology &gt; Personality Disorders <b><br></b><br><b><br></b><br><b><br></b>",
+        "start": "2026-02-27T14:00:00+00:00",
+        "end": "2026-02-27T15:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Perinatal Psychiatry",
+        "lecturer_name": "Pineda",
+        "description": "<u><b>First Aid 2020</b></u><br>p. 562\u00c3\u0082\u00c2\u00a0\u00c3\u0082\u00c2\u00a0<b></b><br><b></b><br><u><b>First Aid 2021</b></u><br>p. 585<br><b></b><br><u><b>Boards &amp; Beyond</b></u><br>Psychiatry &gt; Pathology &gt; Mood Disorders<b><br></b>",
+        "start": "2026-02-27T15:30:00+00:00",
+        "end": "2026-02-27T16:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "REQ: Naloxone Training",
+        "lecturer_name": "Live Zoom",
+        "description": "",
+        "start": "2026-02-27T19:30:00+00:00",
+        "end": "2026-02-27T20:30:00+00:00",
+        "location": "CONFIRMED"
+    },
+    {
+        "lecture_name": "Doctoring Assignment: Field Note #2 due by 6pm",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-02-27T23:00:00+00:00",
+        "end": "2026-02-28T00:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Dementia",
+        "lecturer_name": "Huey",
+        "description": "<u><b>First Aid 2020</b></u><br>pp. 520-521, 549\u00c3\u0082\u00c2\u00a0\u00c3\u0082\u00c2\u00a0<b></b><br><b></b><br><u><b>First Aid 2021</b></u><br>pp. 538-539, 569<b><br></b><br><u><b>Boards &amp; Beyond</b></u><br>Neurology &gt; Other Topics &gt; Delerium and Dementia<br>Psychiatry &gt; Pathology &gt; Cognitive Disorders <b></b><br><b><br></b>",
+        "start": "2026-03-02T14:00:00+00:00",
+        "end": "2026-03-02T14:50:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Delirium",
+        "lecturer_name": "Bayer",
+        "description": "",
+        "start": "2026-03-02T15:00:00+00:00",
+        "end": "2026-03-02T16:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "REQ: HSS: Harm reduction panel",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-03-02T18:00:00+00:00",
+        "end": "2026-03-02T21:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "**ILM: Psychiatric & Psychopharmacologic Emergencies",
+        "lecturer_name": "Brannan & Halt",
+        "description": "",
+        "start": "2026-03-02T21:00:00+00:00",
+        "end": "2026-03-02T22:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "REQ: Sim Session #2: Psychosis, Substance Use, Personality Disorder",
+        "lecturer_name": "Otu; Theyel",
+        "description": "",
+        "start": "2026-03-03T14:00:00+00:00",
+        "end": "2026-03-03T15:20:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Psych Review Session",
+        "lecturer_name": "Optional",
+        "description": "",
+        "start": "2026-03-03T15:30:00+00:00",
+        "end": "2026-03-03T16:30:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Careers in Medicine - Neurology",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-03-03T17:00:00+00:00",
+        "end": "2026-03-03T18:00:00+00:00",
+        "location": "160"
+    },
+    {
+        "lecture_name": "Doctoring Didactic Session #8: Substance Use Counseling",
+        "lecturer_name": "Unknown",
+        "description": "Seminar rooms \nCSS",
+        "start": "2026-03-03T18:00:00+00:00",
+        "end": "2026-03-03T21:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Reading Day",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-03-04T14:00:00+00:00",
+        "end": "2026-03-04T22:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "Reading Day",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-03-05T14:00:00+00:00",
+        "end": "2026-03-05T22:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "BRAIN SCIENCES EXAM #3",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-03-06T14:00:00+00:00",
+        "end": "2026-03-06T17:00:00+00:00",
+        "location": "N/A"
+    },
+    {
+        "lecture_name": "VACATION WEEK",
+        "lecturer_name": "Unknown",
+        "description": "",
+        "start": "2026-03-09",
+        "end": "2026-03-14",
+        "location": "N/A"
+    }
+]

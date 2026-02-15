@@ -14,6 +14,51 @@
         .ingested-text { text-decoration: line-through; color: #94a3b8; }
         input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
 
+        /* Missing Tailwind Classes */
+        .w-8 { width: 2rem !important; height: 2rem !important; }
+        .h-8 { height: 2rem !important; }
+        .p-2 { padding: 0.5rem !important; }
+        .flex-shrink-0 { flex-shrink: 0 !important; }
+        .min-w-0 { min-width: 0 !important; }
+        .gap-4 { gap: 1rem !important; }
+        
+        .lg\:hidden { display: none !important; }
+        @media (max-width: 1023px) {
+            .lg\:hidden { display: block !important; }
+        }
+
+        /* Mobile Drawer */
+        @media (max-width: 1023px) {
+            #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: 280px;
+                background: white;
+                z-index: 100;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                margin: 0 !important;
+                padding: 2rem;
+                box-shadow: 20px 0 50px -10px rgba(0,0,0,0.1);
+            }
+            #sidebar.open {
+                transform: translateX(0);
+            }
+            #sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.5);
+                backdrop-blur: 4px;
+                z-index: 90;
+            }
+            #sidebar-overlay.open {
+                display: block;
+            }
+        }
+
         /* Mobile Modal Hack */
         @media (max-width: 1000px) {
             #bulk-pass-modal > div {
@@ -198,9 +243,17 @@
     <!-- Header & Global Stats -->
     <header class="mb-10">
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-            <div>
-                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Mastery Optimization Dashboard</h1>
-                <p class="text-slate-500 mt-1">Brown University's Warren Alpert Medical School Learning System</p>
+            <div class="flex-1">
+                <div class="flex items-start gap-4">
+                    <!-- Hamburger Button -->
+                    <button onclick="toggleSidebar(true)" class="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors flex-shrink-0">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div class="min-w-0">
+                        <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Mastery Optimization Dashboard</h1>
+                        <p class="text-slate-500 mt-1">Brown University's Warren Alpert Medical School Learning System</p>
+                    </div>
+                </div>
                 <div class="mt-6 flex items-center gap-3">
                     <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Block:</label>
                     <block-controls id="block-controls"></block-controls>
@@ -228,8 +281,17 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Sidebar Overlay -->
+        <div id="sidebar-overlay" onclick="toggleSidebar(false)" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300"></div>
+
         <!-- Sidebar -->
-        <aside class="lg:col-span-3 space-y-6">
+        <aside id="sidebar" class="lg:col-span-3 space-y-6">
+            <div class="lg:hidden flex justify-between items-center mb-6">
+                <span class="text-xl font-black text-indigo-600">Menu</span>
+                <button onclick="toggleSidebar(false)" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
             <app-navigation id="app-navigation" active-view="dashboard"></app-navigation>
             <priority-sidebar id="priority-sidebar"></priority-sidebar>
         </aside>
@@ -244,6 +306,7 @@
                 
 
             <pass-history-view id="view-history" class="view hidden"></pass-history-view>
+            <lecture-import-view id="view-import" class="view hidden"></lecture-import-view>
             <!-- Walkthrough -->
             <walkthrough-view id="view-walkthrough" class="view hidden space-y-8"></walkthrough-view>
 
@@ -525,6 +588,7 @@
                 { id: 'dashboard', label: 'Topic Mastery' },
                 { id: 'checklist', label: 'Lecture Checklist' },
                 { id: 'lectures', label: 'Lecture Catalog' },
+                { id: 'import', label: 'Import Lectures' },
                 { id: 'history', label: 'Pass History' },
                 { id: 'walkthrough', label: 'Walkthrough' }
             ];
@@ -565,18 +629,414 @@
         }
         render() {
             const content = this._priority ? (
-                this._isArray ? this._priority.map(this._renderElement).join("<br/>") : this._renderElement(this._priority)
+                this._isArray ? 
+                    `<div class="flex flex-col gap-3">${this._priority.map(this._renderElement).join("")}</div>` : 
+                    this._renderElement(this._priority)
             ) : '<div class="bg-white/10 rounded-xl p-3 border border-white/20"><span class="text-xs uppercase font-bold opacity-70">Add topics to begin</span></div>';
 
             this.innerHTML = `
                 <div class="bg-indigo-600 rounded-2xl p-6 text-white card-shadow">
-                    <h3 class="font-bold text-lg mb-2">Next Priority</h3>
+                    <h3 class="font-bold text-lg mb-4 uppercase tracking-wider">Top Priorities</h3>
                     ${content}
                 </div>
             `;
         }
     }
     customElements.define('priority-sidebar', PrioritySidebar);
+
+    class LectureImportView extends HTMLElement {
+        constructor() {
+            super();
+            this._step = 1;
+            this._lectures = [];
+            this._subjects = [];
+            this._activeTopics = [];
+        }
+        set data({ state, activeTopics }) {
+            this._state = state;
+            // Initialize working copies on first load of a step
+            if (this._step === 1 && this._lectures.length === 0) {
+                this._activeTopics = [...activeTopics];
+                this._subjects = [...new Set(activeTopics.map(t => t.subject).filter(s => s))].sort();
+            }
+            this.render();
+        }
+        connectedCallback() { this.render(); }
+
+        prevStep() { if (this._step > 1) { this._step--; this.render(); } }
+        nextStep() { if (this._step < 4) { this._step++; this.render(); } }
+
+        handleParse() {
+            const textarea = this.querySelector('#import-json-textarea');
+            if (!textarea) return;
+            try {
+                const data = JSON.parse(textarea.value);
+                const list = Array.isArray(data) ? data : [data];
+                this._lectures = list.map(l => ({
+                    id: 'imp-' + Math.random().toString(36).substr(2, 9),
+                    title: (l.lecture_name || l.title || "Untitled").replace(/^\*\*ILM:\s*/, ''),
+                    lecturer: l.lecturer_name || l.lecturer || "Unknown",
+                    date: (l.start || l.date || "").split('T')[0],
+                    subject: "",
+                    topicId: "",
+                    selected: false
+                }));
+                this._step = 2;
+                this.render();
+            } catch (e) {
+                alert("Failed to parse JSON. Please check the format.");
+            }
+        }
+
+        updateLecture(id, field, value) {
+            const lecture = this._lectures.find(l => l.id === id);
+            if (!lecture) return;
+
+            if (value === 'new_subject') {
+                const name = prompt("Enter new subject name:");
+                if (name) {
+                    if (!this._subjects.includes(name)) {
+                        this._subjects.push(name);
+                        this._subjects.sort();
+                    }
+                    lecture.subject = name;
+                }
+            } else if (value === 'new_topic') {
+                const name = prompt("Enter new topic name:", lecture.title);
+                if (name) {
+                    const newTopicId = 'pending-' + Date.now() + Math.random().toString(36).substr(2, 5);
+                    this._activeTopics.push({ id: newTopicId, name: name, subject: lecture.subject });
+                    lecture.topicId = newTopicId;
+                }
+            } else {
+                lecture[field] = value;
+                // Auto-sync subject if topic changed to an existing one
+                if (field === 'topicId' && value && !value.startsWith('pending-')) {
+                    const topic = this._state.topics.find(t => t.id === value);
+                    if (topic && topic.subject) lecture.subject = topic.subject;
+                }
+            }
+            this.render();
+        }
+
+        toggleSelect(id, checked) {
+            const l = this._lectures.find(x => x.id === id);
+            if (l) l.selected = checked;
+            this.render();
+        }
+
+        toggleAll(checked) {
+            this._lectures.forEach(l => l.selected = checked);
+            this.render();
+        }
+
+        selectAll() { this.toggleAll(true); }
+
+        bulkApplySubject(sub) {
+            const targets = this._lectures.filter(l => l.selected);
+            const list = targets.length > 0 ? targets : this._lectures;
+            list.forEach(l => l.subject = sub);
+            this.render();
+        }
+
+        bulkApplyTopic(tid) {
+            const targets = this._lectures.filter(l => l.selected);
+            const list = targets.length > 0 ? targets : this._lectures;
+            list.forEach(l => l.topicId = tid);
+            this.render();
+        }
+
+        applyToSelected() {
+            const sub = this.querySelector('#batch-subject')?.value;
+            const tid = this.querySelector('#batch-topic')?.value;
+            const targets = this._lectures.filter(l => l.selected);
+            
+            if (targets.length === 0) {
+                alert("Please select lectures first.");
+                return;
+            }
+            if (!sub && !tid) {
+                alert("Please select a Subject or Topic to apply.");
+                return;
+            }
+
+            targets.forEach(l => {
+                if (sub) l.subject = sub;
+                if (tid) l.topicId = tid;
+            });
+            this.render();
+        }
+
+        commitImport() {
+            const blockId = this._state.activeBlockId;
+            const taggedLectures = this._lectures.filter(l => l.topicId);
+            const newTopicsMap = {};
+
+            // 1. Create New Topics
+            const newTopics = this._activeTopics.filter(t => t.id.startsWith('pending-'));
+            newTopics.forEach(pt => {
+                const realId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
+                newTopicsMap[pt.id] = realId;
+                this._state.topics.push({
+                    id: realId,
+                    blockId: blockId,
+                    name: pt.name,
+                    subject: pt.subject || "",
+                    tags: []
+                });
+            });
+
+            // 2. Add Lectures
+            taggedLectures.forEach(il => {
+                const finalTopicId = newTopicsMap[il.topicId] || il.topicId;
+                this._state.lectures.push({
+                    id: 'l' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    blockId: blockId,
+                    title: il.title,
+                    date: il.date,
+                    topics: [finalTopicId],
+                    ingested: false
+                });
+            });
+
+            this._step = 4;
+            save();
+            render();
+        }
+
+        renderStep1() {
+            return `
+                <div class="space-y-6">
+                    <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">Step 1: Data Input</h3>
+                        <p class="text-sm text-slate-500 mb-6">Paste the JSON array of lecture objects exported from your syllabus or calendar.</p>
+                        <textarea id="import-json-textarea" class="w-full h-80 p-4 font-mono text-xs border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder='[
+  {
+    "lecture_name": "...",
+    "lecturer_name": "...",
+    "start": "2026-03-02..."
+  }
+]'></textarea>
+                    </div>
+                    <div class="flex justify-end gap-4">
+                        <button onclick="switchView('lectures')" class="px-8 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+                        <button onclick="this.closest('lecture-import-view').handleParse()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100">Parse & Continue</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        renderStep2() {
+            const taggedCount = this._lectures.filter(l => l.topicId).length;
+            const totalCount = this._lectures.length;
+            const progress = totalCount > 0 ? Math.round((taggedCount / totalCount) * 100) : 0;
+
+            return `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-3xl card-shadow border border-slate-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="flex items-center gap-4">
+                                <h3 class="text-lg font-bold text-slate-800">Tag Lectures</h3>
+                                <span class="bg-slate-100 text-slate-500 text-[10px] px-2 py-1 rounded-full font-black uppercase tracking-widest">${totalCount} LECTURES</span>
+                            </div>
+                            <button class="text-xs font-bold text-indigo-600 hover:text-indigo-800">Apply tags to remaining ▾</button>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase mb-2">
+                            <span>Progress: ${taggedCount} of ${totalCount} tagged</span>
+                            <span>${progress}%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                            <div class="bg-indigo-600 h-full transition-all duration-500" style="width: ${progress}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-600 p-3 rounded-2xl flex flex-wrap items-center gap-3 text-white shadow-xl">
+                        <span class="text-xs font-black uppercase tracking-wider ml-2">Quick Actions</span>
+                        <div class="h-6 w-px bg-white/20 hidden sm:block"></div>
+                        <select id="batch-subject" class="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 cursor-pointer">
+                            <option value="" disabled selected>Batch Subject...</option>
+                            ${this._subjects.map(s => `<option value="${s}" class="text-slate-800">${s}</option>`).join('')}
+                        </select>
+                        <select id="batch-topic" class="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 cursor-pointer">
+                            <option value="" disabled selected>Batch Topic...</option>
+                            ${this._activeTopics.filter(t => !t.id.startsWith('pending-')).map(t => `<option value="${t.id}" class="text-slate-800">${t.name}</option>`).join('')}
+                        </select>
+                        <div class="flex-1"></div>
+                        <button onclick="this.closest('lecture-import-view').selectAll()" class="bg-white/10 border border-white/20 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-white/20 transition-colors">Select All</button>
+                        <button onclick="this.closest('lecture-import-view').applyToSelected()" class="bg-white text-indigo-600 px-4 py-1.5 rounded-lg text-xs font-black hover:bg-indigo-50 transition-colors">Apply to Selected</button>
+                    </div>
+
+                    <div class="hidden lg:block bg-white rounded-3xl border border-slate-100 card-shadow overflow-y-auto max-h-[480px] custom-scroll">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-6 py-4 w-12 text-center">
+                                        <input type="checkbox" onchange="this.closest('lecture-import-view').toggleAll(this.checked)" class="w-4 h-4 rounded text-indigo-600 border-slate-300">
+                                    </th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lecture</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Topic</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${this._lectures.map(l => this.renderTableRow(l)).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="lg:hidden space-y-4 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
+                        ${this._lectures.map(l => this.renderCard(l)).join('')}
+                    </div>
+
+                    <div class="flex justify-between items-center pt-6">
+                        <button onclick="this.closest('lecture-import-view').prevStep()" class="px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">Back</button>
+                        <button onclick="this.closest('lecture-import-view').nextStep()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50" ${taggedCount === 0 ? 'disabled' : ''}>Review Import</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        renderTableRow(l) {
+            const relevantTopics = this._activeTopics.filter(t => !l.subject || t.subject === l.subject);
+            return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4 text-center">
+                        <input type="checkbox" ${l.selected ? 'checked' : ''} onchange="this.closest('lecture-import-view').toggleSelect('${l.id}', this.checked)" class="w-4 h-4 rounded text-indigo-600 border-slate-300">
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm font-bold text-slate-800 leading-tight">${l.title}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">${l.lecturer}</p>
+                    </td>
+                    <td class="px-6 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">${l.date}</td>
+                    <td class="px-6 py-4">
+                        <select onchange="this.closest('lecture-import-view').updateLecture('${l.id}', 'subject', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Select...</option>
+                            ${this._subjects.map(s => `<option value="${s}" ${l.subject === s ? 'selected' : ''}>${s}</option>`).join('')}
+                            <option value="new_subject">+ New...</option>
+                        </select>
+                    </td>
+                    <td class="px-6 py-4">
+                        <select onchange="this.closest('lecture-import-view').updateLecture('${l.id}', 'topicId', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Select...</option>
+                            ${relevantTopics.map(t => `<option value="${t.id}" ${l.topicId === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+                            <option value="new_topic">+ New Topic...</option>
+                        </select>
+                    </td>
+                </tr>
+            `;
+        }
+
+        renderCard(l) {
+            const relevantTopics = this._activeTopics.filter(t => !l.subject || t.subject === l.subject);
+            return `
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 card-shadow space-y-4">
+                    <div class="flex gap-3">
+                        <input type="checkbox" ${l.selected ? 'checked' : ''} onchange="this.closest('lecture-import-view').toggleSelect('${l.id}', this.checked)" class="w-5 h-5 rounded text-indigo-600 border-slate-300 mt-1">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1">${l.date}</p>
+                            <h4 class="font-bold text-slate-800 leading-tight truncate">${l.title}</h4>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase">${l.lecturer}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Subject</label>
+                            <select onchange="this.closest('lecture-import-view').updateLecture('${l.id}', 'subject', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2 text-xs font-bold">
+                                <option value="">Select...</option>
+                                ${this._subjects.map(s => `<option value="${s}" ${l.subject === s ? 'selected' : ''}>${s}</option>`).join('')}
+                                <option value="new_subject">+ New...</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-400 uppercase">Topic</label>
+                            <select onchange="this.closest('lecture-import-view').updateLecture('${l.id}', 'topicId', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2 text-xs font-bold">
+                                <option value="">Select...</option>
+                                ${relevantTopics.map(t => `<option value="${t.id}" ${l.topicId === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+                                <option value="new_topic">+ New Topic...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        renderStep3() {
+            const taggedLectures = this._lectures.filter(l => l.topicId);
+            const newTopics = this._activeTopics.filter(t => t.id.startsWith('pending-'));
+            
+            return `
+                <div class="space-y-6">
+                    <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Step 3: Final Review</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <h4 class="text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">Lectures to Import</h4>
+                                <div class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scroll">
+                                    ${taggedLectures.map(l => `
+                                        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                                            <span class="text-xs font-bold text-slate-700 truncate mr-2">${l.title}</span>
+                                            <span class="text-[9px] px-2 py-1 bg-indigo-100 text-indigo-600 rounded-full font-black uppercase whitespace-nowrap">${this._activeTopics.find(t => t.id === l.topicId)?.name || 'Unknown'}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">New Topics to Create</h4>
+                                <div class="space-y-2">
+                                    ${newTopics.length > 0 ? newTopics.map(t => `
+                                        <div class="flex justify-between items-center p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                                            <span class="text-xs font-bold text-emerald-700">${t.name}</span>
+                                            <span class="text-[9px] text-emerald-500 font-bold uppercase">${t.subject || 'GENERAL'}</span>
+                                        </div>
+                                    `).join('') : '<p class="text-xs text-slate-400 italic py-10 text-center">No new topics will be created.</p>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-6">
+                        <button onclick="this.closest('lecture-import-view').prevStep()" class="px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">Back</button>
+                        <button onclick="this.closest('lecture-import-view').commitImport()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100">Commit Import</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        renderStep4() {
+            return `
+                <div class="flex flex-col items-center justify-center py-20 space-y-6">
+                    <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <h3 class="text-3xl px-4 py-2 font-black text-slate-800">Import Successful!</h3>
+                    <p class="text-slate-500 text-center max-w-md">Your lectures and topics have been added to the active block. You can now track your mastery progress for these new areas.</p>
+                    <button onclick="switchView('lectures')" class="bg-indigo-600 text-white px-4 py-4 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100">View Lecture Catalog</button>
+                </div>
+            `;
+        }
+
+        render() {
+            if (!this._state) return;
+            let stepContent = "";
+            if (this._step === 1) stepContent = this.renderStep1();
+            else if (this._step === 2) stepContent = this.renderStep2();
+            else if (this._step === 3) stepContent = this.renderStep3();
+            else if (this._step === 4) stepContent = this.renderStep4();
+
+            this.innerHTML = `
+                <div class="max-w-6xl mx-auto pb-20">
+                    <div class="flex justify-between items-center mb-10">
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">Lecture Import Wizard</h2>
+                        <span class="text-xs font-bold bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full uppercase tracking-widest shadow-sm">Step ${this._step} of 4</span>
+                    </div>
+                    ${stepContent}
+                </div>
+            `;
+        }
+    }
+    customElements.define('lecture-import-view', LectureImportView);
 
     class TopicMasteryView extends HTMLElement {
         static renderRow(topic) {
@@ -1246,6 +1706,10 @@
 
     // --- Data Operations ---
 
+    // TODO (HIGH priority): JSON import of lectures workflow
+    // 1. Import lecture objects from JSON payload.
+    // 2. Implementation of Subject/Topic selection wizard or bulk tool.
+    // 3. Confirmation step for new subjects/topics to prevent typos.
     function exportData() {
         const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1795,8 +2259,29 @@ function handleBlockSubmit(e) {
      */
     function switchView(viewId) {
         state.activeViewId = viewId;
+        toggleSidebar(false);
         save();
         render();
+    }
+
+    function toggleSidebar(open) {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        if (!sidebar || !overlay) return;
+
+        if (open) {
+            sidebar.classList.add('open');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('open');
+            setTimeout(() => overlay.classList.add('opacity-100'), 10);
+        } else {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('opacity-100');
+            setTimeout(() => {
+                overlay.classList.remove('open');
+                overlay.classList.add('hidden');
+            }, 300);
+        }
     }
 
     function getTopicStats(topicId) {
@@ -1884,11 +2369,15 @@ function handleBlockSubmit(e) {
 
         const history = document.getElementById('view-history');
         if (history) history.data = { state, activeTopics, isAllBlocks };
+
+        const importView = document.getElementById('view-import');
+        if (importView) importView.data = { state, activeTopics };
     }
 
     // --- PRIORITY LOGIC ---
-    function calculatePriority(state, activeTopics, nSubjects = 5) {
-        // Implementation of Harmonic Mean Priority Queue
+    // TODO (low priority): Plumbing the UI for the nSubjects, so it can be updated.
+    function calculatePriority(state, activeTopics, nSubjects = 3) {
+        // Implementation of Harmonic Mean Priority Queue with Priority Maxing
         
         if (activeTopics.length === 0) return [];
 
@@ -1910,12 +2399,18 @@ function handleBlockSubmit(e) {
             }
         });
 
-        // 2. Sort subjects by their lowest Mi (triage the weakest subjects first)
-        // This ensures interleaving naturally because we pick the best candidate from EACH subject
-        // and then rank those candidates against each other.
-        const priorities = Object.values(bestPerSubject).sort((a, b) => a.mi - b.mi);
+        // 2. Sort subjects: Unmastered first (< 7.0), then by Mi score
+        const priorities = Object.values(bestPerSubject).sort((a, b) => {
+            const aUnmastered = a.mi < 7.0;
+            const bUnmastered = b.mi < 7.0;
+            
+            if (aUnmastered && !bUnmastered) return -1;
+            if (!aUnmastered && bUnmastered) return 1;
+            
+            return a.mi - b.mi;
+        });
 
-        // 3. Return top 3 unique subjects
+        // 3. Return top N unique subjects
         return priorities.slice(0, nSubjects);
     }
 
