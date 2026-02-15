@@ -3,6 +3,10 @@
 ## [Unreleased] - 2026-02-14
 
 ### Added
+- **Smart Lecture Import:** Enhanced the Import Wizard to detect pre-tagged data.
+    - Automatic mapping of `subject` and `topics` (plural) from JSON.
+    - Intelligent topic matching: links to existing topics by name or registers new ones.
+    - "Review Match-ups" UI: A streamlined second step for reviewing pre-tagged data instead of manual dropdown selection.
 - **JSON Lecture Import Wizard:** A multi-step workflow for bulk importing lectures.
     - Step 1: JSON payload parsing.
     - Step 2: Interactive tagging UI with responsive Table (Desktop) and Card (Mobile) views.

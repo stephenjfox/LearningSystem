@@ -651,6 +651,7 @@
             this._lectures = [];
             this._subjects = [];
             this._activeTopics = [];
+            this._isSmartImport = false;
         }
         set data({ state, activeTopics }) {
             this._state = state;
@@ -672,18 +673,52 @@
             try {
                 const data = JSON.parse(textarea.value);
                 const list = Array.isArray(data) ? data : [data];
-                this._lectures = list.map(l => ({
-                    id: 'imp-' + Math.random().toString(36).substr(2, 9),
-                    title: (l.lecture_name || l.title || "Untitled").replace(/^\*\*ILM:\s*/, ''),
-                    lecturer: l.lecturer_name || l.lecturer || "Unknown",
-                    date: (l.start || l.date || "").split('T')[0],
-                    subject: "",
-                    topicId: "",
-                    selected: false
-                }));
+                
+                // Detect if any item has a topics array or pre-assigned subject
+                this._isSmartImport = list.some(l => (l.topics && Array.isArray(l.topics)) || l.subject);
+
+                // Add any subjects found in the JSON to our global subjects list
+                list.forEach(l => {
+                    if (l.subject && !this._subjects.includes(l.subject)) {
+                        this._subjects.push(l.subject);
+                    }
+                });
+                this._subjects.sort();
+
+                this._lectures = list.map(l => {
+                    const lectureTopics = [];
+                    if (l.topics && Array.isArray(l.topics)) {
+                        l.topics.forEach(tn => {
+                            // Try to find existing topic by name in current block
+                            const existing = this._state.topics.find(t => t.name.toLowerCase() === tn.toLowerCase() && t.blockId === this._state.activeBlockId);
+                            lectureTopics.push({
+                                id: existing ? existing.id : 'pending-' + Math.random().toString(36).substr(2, 5),
+                                name: tn
+                            });
+                        });
+                    } else if (l.topic_name || l.topic) {
+                        const tn = l.topic_name || l.topic;
+                        const existing = this._state.topics.find(t => t.name.toLowerCase() === tn.toLowerCase() && t.blockId === this._state.activeBlockId);
+                        lectureTopics.push({
+                            id: existing ? existing.id : 'pending-' + Math.random().toString(36).substr(2, 5),
+                            name: tn
+                        });
+                    }
+
+                    return {
+                        id: 'imp-' + Math.random().toString(36).substr(2, 9),
+                        title: (l.lecture_name || l.title || "Untitled").replace(/^\*\*ILM:\s*/, ''),
+                        lecturer: l.lecturer_name || l.lecturer || "Unknown",
+                        date: (l.start || l.date || "").split('T')[0],
+                        subject: l.subject || "",
+                        topics: lectureTopics,
+                        selected: false
+                    };
+                });
                 this._step = 2;
                 this.render();
             } catch (e) {
+                console.error(e);
                 alert("Failed to parse JSON. Please check the format.");
             }
         }
@@ -692,28 +727,31 @@
             const lecture = this._lectures.find(l => l.id === id);
             if (!lecture) return;
 
-            if (value === 'new_subject') {
-                const name = prompt("Enter new subject name:");
-                if (name) {
-                    if (!this._subjects.includes(name)) {
-                        this._subjects.push(name);
-                        this._subjects.sort();
+            if (field === 'subject') {
+                if (value === 'new_subject') {
+                    const name = prompt("Enter new subject name:");
+                    if (name) {
+                        if (!this._subjects.includes(name)) {
+                            this._subjects.push(name);
+                            this._subjects.sort();
+                        }
+                        lecture.subject = name;
                     }
-                    lecture.subject = name;
+                } else {
+                    lecture.subject = value;
                 }
-            } else if (value === 'new_topic') {
-                const name = prompt("Enter new topic name:", lecture.title);
-                if (name) {
-                    const newTopicId = 'pending-' + Date.now() + Math.random().toString(36).substr(2, 5);
-                    this._activeTopics.push({ id: newTopicId, name: name, subject: lecture.subject });
-                    lecture.topicId = newTopicId;
-                }
-            } else {
-                lecture[field] = value;
-                // Auto-sync subject if topic changed to an existing one
-                if (field === 'topicId' && value && !value.startsWith('pending-')) {
+            } else if (field === 'topicId') {
+                // Legacy single-topic update
+                if (value === 'new_topic') {
+                    const name = prompt("Enter new topic name:", lecture.title);
+                    if (name) {
+                        const newId = 'pending-' + Date.now() + Math.random().toString(36).substr(2, 5);
+                        lecture.topics = [{ id: newId, name: name }];
+                    }
+                } else {
                     const topic = this._state.topics.find(t => t.id === value);
-                    if (topic && topic.subject) lecture.subject = topic.subject;
+                    lecture.topics = [{ id: value, name: topic ? topic.name : 'Unknown' }];
+                    if (topic && topic.subject && !lecture.subject) lecture.subject = topic.subject;
                 }
             }
             this.render();
@@ -762,41 +800,48 @@
 
             targets.forEach(l => {
                 if (sub) l.subject = sub;
-                if (tid) l.topicId = tid;
+                if (tid) {
+                    const topic = this._state.topics.find(t => t.id === tid);
+                    l.topics = [{ id: tid, name: topic ? topic.name : 'Unknown' }];
+                }
             });
             this.render();
         }
 
         commitImport() {
             const blockId = this._state.activeBlockId;
-            const taggedLectures = this._lectures.filter(l => l.topicId);
-            const newTopicsMap = {};
+            const pendingTopicsMap = {};
 
-            // 1. Create New Topics
-            const newTopics = this._activeTopics.filter(t => t.id.startsWith('pending-'));
-            newTopics.forEach(pt => {
-                const realId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
-                newTopicsMap[pt.id] = realId;
-                this._state.topics.push({
-                    id: realId,
-                    blockId: blockId,
-                    name: pt.name,
-                    subject: pt.subject || "",
-                    tags: []
-                });
-            });
+            this._lectures.forEach(il => {
+                const finalTopicIds = il.topics.map(t => {
+                    if (t.id.startsWith('pending-')) {
+                        // Check if we already created a real ID for this pending topic name in this session
+                        if (pendingTopicsMap[t.name]) return pendingTopicsMap[t.name];
 
-            // 2. Add Lectures
-            taggedLectures.forEach(il => {
-                const finalTopicId = newTopicsMap[il.topicId] || il.topicId;
-                this._state.lectures.push({
-                    id: 'l' + Date.now() + Math.random().toString(36).substr(2, 5),
-                    blockId: blockId,
-                    title: il.title,
-                    date: il.date,
-                    topics: [finalTopicId],
-                    ingested: false
+                        const realId = 't' + Date.now() + Math.random().toString(36).substr(2, 5);
+                        pendingTopicsMap[t.name] = realId;
+                        this._state.topics.push({
+                            id: realId,
+                            blockId: blockId,
+                            name: t.name,
+                            subject: il.subject || "",
+                            tags: []
+                        });
+                        return realId;
+                    }
+                    return t.id;
                 });
+
+                if (finalTopicIds.length > 0) {
+                    this._state.lectures.push({
+                        id: 'l' + Date.now() + Math.random().toString(36).substr(2, 5),
+                        blockId: blockId,
+                        title: il.title,
+                        date: il.date,
+                        topics: finalTopicIds,
+                        ingested: false
+                    });
+                }
             });
 
             this._step = 4;
@@ -809,12 +854,12 @@
                 <div class="space-y-6">
                     <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
                         <h3 class="text-lg font-bold text-slate-800 mb-2">Step 1: Data Input</h3>
-                        <p class="text-sm text-slate-500 mb-6">Paste the JSON array of lecture objects exported from your syllabus or calendar.</p>
+                        <p class="text-sm text-slate-500 mb-6">Paste the JSON array of lecture objects. We now support pre-defined subjects and multiple topics!</p>
                         <textarea id="import-json-textarea" class="w-full h-80 p-4 font-mono text-xs border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder='[
   {
     "lecture_name": "...",
-    "lecturer_name": "...",
-    "start": "2026-03-02..."
+    "subject": "...",
+    "topics": ["Topic A", "Topic B"]
   }
 ]'></textarea>
                     </div>
@@ -827,19 +872,20 @@
         }
 
         renderStep2() {
-            const taggedCount = this._lectures.filter(l => l.topicId).length;
+            const taggedCount = this._lectures.filter(l => l.topics.length > 0).length;
             const totalCount = this._lectures.length;
             const progress = totalCount > 0 ? Math.round((taggedCount / totalCount) * 100) : 0;
+
+            const headerText = this._isSmartImport ? "Review Match-ups" : "Tag Lectures";
 
             return `
                 <div class="space-y-6">
                     <div class="bg-white p-6 rounded-3xl card-shadow border border-slate-100">
                         <div class="flex justify-between items-center mb-4">
                             <div class="flex items-center gap-4">
-                                <h3 class="text-lg font-bold text-slate-800">Tag Lectures</h3>
+                                <h3 class="text-lg font-bold text-slate-800">${headerText}</h3>
                                 <span class="bg-slate-100 text-slate-500 text-[10px] px-2 py-1 rounded-full font-black uppercase tracking-widest">${totalCount} LECTURES</span>
                             </div>
-                            <button class="text-xs font-bold text-indigo-600 hover:text-indigo-800">Apply tags to remaining ▾</button>
                         </div>
                         <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase mb-2">
                             <span>Progress: ${taggedCount} of ${totalCount} tagged</span>
@@ -850,6 +896,7 @@
                         </div>
                     </div>
 
+                    ${this._isSmartImport ? '' : `
                     <div class="bg-indigo-600 p-3 rounded-2xl flex flex-wrap items-center gap-3 text-white shadow-xl">
                         <span class="text-xs font-black uppercase tracking-wider ml-2">Quick Actions</span>
                         <div class="h-6 w-px bg-white/20 hidden sm:block"></div>
@@ -865,18 +912,18 @@
                         <button onclick="this.closest('lecture-import-view').selectAll()" class="bg-white/10 border border-white/20 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-white/20 transition-colors">Select All</button>
                         <button onclick="this.closest('lecture-import-view').applyToSelected()" class="bg-white text-indigo-600 px-4 py-1.5 rounded-lg text-xs font-black hover:bg-indigo-50 transition-colors">Apply to Selected</button>
                     </div>
+                    `}
 
-                    <div class="hidden lg:block bg-white rounded-3xl border border-slate-100 card-shadow overflow-y-auto max-h-[480px] custom-scroll">
+                    <div class="bg-white rounded-3xl border border-slate-100 card-shadow overflow-y-auto max-h-[60vh] custom-scroll">
                         <table class="w-full text-left">
                             <thead class="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
                                 <tr>
                                     <th class="px-6 py-4 w-12 text-center">
                                         <input type="checkbox" onchange="this.closest('lecture-import-view').toggleAll(this.checked)" class="w-4 h-4 rounded text-indigo-600 border-slate-300">
                                     </th>
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lecture</th>
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Lecture Details</th>
                                     <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject</th>
-                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Topic</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Topics</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
@@ -885,13 +932,9 @@
                         </table>
                     </div>
 
-                    <div class="lg:hidden space-y-4 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
-                        ${this._lectures.map(l => this.renderCard(l)).join('')}
-                    </div>
-
                     <div class="flex justify-between items-center pt-6">
                         <button onclick="this.closest('lecture-import-view').prevStep()" class="px-6 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">Back</button>
-                        <button onclick="this.closest('lecture-import-view').nextStep()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50" ${taggedCount === 0 ? 'disabled' : ''}>Review Import</button>
+                        <button onclick="this.closest('lecture-import-view').nextStep()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50" ${taggedCount === 0 ? 'disabled' : ''}>Review & Commit</button>
                     </div>
                 </div>
             `;
@@ -899,6 +942,14 @@
 
         renderTableRow(l) {
             const relevantTopics = this._activeTopics.filter(t => !l.subject || t.subject === l.subject);
+            
+            // Smart mode shows tags, Manual mode shows dropdowns
+            const topicsHtml = l.topics.map(t => `
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${t.id.startsWith('pending-') ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700'} mb-1 mr-1">
+                    ${t.name}
+                </span>
+            `).join('');
+
             return `
                 <tr class="hover:bg-slate-50 transition-colors">
                     <td class="px-6 py-4 text-center">
@@ -906,9 +957,8 @@
                     </td>
                     <td class="px-6 py-4">
                         <p class="text-sm font-bold text-slate-800 leading-tight">${l.title}</p>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase">${l.lecturer}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">${l.lecturer} • ${l.date}</p>
                     </td>
-                    <td class="px-6 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">${l.date}</td>
                     <td class="px-6 py-4">
                         <select onchange="this.closest('lecture-import-view').updateLecture('${l.id}', 'subject', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="">Select...</option>
@@ -917,17 +967,20 @@
                         </select>
                     </td>
                     <td class="px-6 py-4">
-                        <select onchange="this.closest('lecture-import-view').updateLecture('${l.id}', 'topicId', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">Select...</option>
-                            ${relevantTopics.map(t => `<option value="${t.id}" ${l.topicId === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
-                            <option value="new_topic">+ New Topic...</option>
-                        </select>
+                        ${this._isSmartImport ? (topicsHtml || '<span class="text-[10px] text-slate-400 italic">No topics found</span>') : `
+                            <select onchange="this.closest('lecture-import-view').updateLecture('${l.id}', 'topicId', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="">Select...</option>
+                                ${relevantTopics.map(t => `<option value="${t.id}" ${l.topics[0]?.id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+                                <option value="new_topic">+ New Topic...</option>
+                            </select>
+                        `}
                     </td>
                 </tr>
             `;
         }
 
         renderCard(l) {
+            // Unused in smart import for now but keeping for consistency
             const relevantTopics = this._activeTopics.filter(t => !l.subject || t.subject === l.subject);
             return `
                 <div class="bg-white p-5 rounded-3xl border border-slate-100 card-shadow space-y-4">
@@ -939,31 +992,14 @@
                             <p class="text-[10px] text-slate-400 font-bold uppercase">${l.lecturer}</p>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black text-slate-400 uppercase">Subject</label>
-                            <select onchange="this.closest('lecture-import-view').updateLecture('${l.id}', 'subject', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2 text-xs font-bold">
-                                <option value="">Select...</option>
-                                ${this._subjects.map(s => `<option value="${s}" ${l.subject === s ? 'selected' : ''}>${s}</option>`).join('')}
-                                <option value="new_subject">+ New...</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black text-slate-400 uppercase">Topic</label>
-                            <select onchange="this.closest('lecture-import-view').updateLecture('${l.id}', 'topicId', this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2 text-xs font-bold">
-                                <option value="">Select...</option>
-                                ${relevantTopics.map(t => `<option value="${t.id}" ${l.topicId === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
-                                <option value="new_topic">+ New Topic...</option>
-                            </select>
-                        </div>
-                    </div>
                 </div>
             `;
         }
 
         renderStep3() {
-            const taggedLectures = this._lectures.filter(l => l.topicId);
-            const newTopics = this._activeTopics.filter(t => t.id.startsWith('pending-'));
+            const taggedLectures = this._lectures.filter(l => l.topics.length > 0);
+            const allTopicNames = taggedLectures.flatMap(l => l.topics.map(t => ({ name: t.name, subject: l.subject, isNew: t.id.startsWith('pending-') })));
+            const newTopics = allTopicNames.filter((t, i, self) => t.isNew && self.findIndex(x => x.name === t.name) === i);
             
             return `
                 <div class="space-y-6">
@@ -972,19 +1008,21 @@
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
-                                <h4 class="text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">Lectures to Import</h4>
+                                <h4 class="text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">Lectures to Import (${taggedLectures.length})</h4>
                                 <div class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scroll">
                                     ${taggedLectures.map(l => `
-                                        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                                            <span class="text-xs font-bold text-slate-700 truncate mr-2">${l.title}</span>
-                                            <span class="text-[9px] px-2 py-1 bg-indigo-100 text-indigo-600 rounded-full font-black uppercase whitespace-nowrap">${this._activeTopics.find(t => t.id === l.topicId)?.name || 'Unknown'}</span>
+                                        <div class="p-3 bg-slate-50 rounded-xl">
+                                            <div class="text-xs font-bold text-slate-700 mb-1">${l.title}</div>
+                                            <div class="flex flex-wrap gap-1">
+                                                ${l.topics.map(t => `<span class="text-[9px] px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full font-black uppercase">${t.name}</span>`).join('')}
+                                            </div>
                                         </div>
                                     `).join('')}
                                 </div>
                             </div>
                             <div>
-                                <h4 class="text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">New Topics to Create</h4>
-                                <div class="space-y-2">
+                                <h4 class="text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">New Topics to Create (${newTopics.length})</h4>
+                                <div class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scroll">
                                     ${newTopics.length > 0 ? newTopics.map(t => `
                                         <div class="flex justify-between items-center p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
                                             <span class="text-xs font-bold text-emerald-700">${t.name}</span>
@@ -1011,7 +1049,7 @@
                         <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                     </div>
                     <h3 class="text-3xl px-4 py-2 font-black text-slate-800">Import Successful!</h3>
-                    <p class="text-slate-500 text-center max-w-md">Your lectures and topics have been added to the active block. You can now track your mastery progress for these new areas.</p>
+                    <p class="text-slate-500 text-center max-w-md">Your lectures and topics have been added. If new topics were created, they've been linked to the appropriate subjects.</p>
                     <button onclick="switchView('lectures')" class="bg-indigo-600 text-white px-4 py-4 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100">View Lecture Catalog</button>
                 </div>
             `;
