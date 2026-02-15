@@ -32,14 +32,6 @@
         "location": "N/A"
     },
     {
-        "lecture_name": "PC-PM Only: Research Methods",
-        "lecturer_name": "Unknown",
-        "description": "",
-        "start": "2026-02-18T13:00:00+00:00",
-        "end": "2026-02-18T14:00:00+00:00",
-        "location": "270"
-    },
-    {
         "lecture_name": "Psychiatry & Psychotherapy",
         "lecturer_name": "Hartselle",
         "description": "",
@@ -53,14 +45,6 @@
         "description": "",
         "start": "2026-02-18T15:30:00+00:00",
         "end": "2026-02-18T16:50:00+00:00",
-        "location": "N/A"
-    },
-    {
-        "lecture_name": "Lunch & Be",
-        "lecturer_name": "Unknown",
-        "description": "",
-        "start": "2026-02-18T17:00:00+00:00",
-        "end": "2026-02-18T18:00:00+00:00",
         "location": "N/A"
     },
     {
@@ -96,14 +80,6 @@
         "location": "N/A"
     },
     {
-        "lecture_name": "PC-PM Only: Research Methods",
-        "lecturer_name": "Unknown",
-        "description": "",
-        "start": "2026-02-19T13:00:00+00:00",
-        "end": "2026-02-19T14:00:00+00:00",
-        "location": "160"
-    },
-    {
         "lecture_name": "**ILM: Neurobiology of Stress & Trauma",
         "lecturer_name": "Daniels",
         "description": "",
@@ -126,14 +102,6 @@
         "start": "2026-02-19T18:00:00+00:00",
         "end": "2026-02-19T22:00:00+00:00",
         "location": "N/A"
-    },
-    {
-        "lecture_name": "PC-PM Only: Research Methods",
-        "lecturer_name": "Unknown",
-        "description": "",
-        "start": "2026-02-20T13:00:00+00:00",
-        "end": "2026-02-20T14:00:00+00:00",
-        "location": "160"
     },
     {
         "lecture_name": "Anxiety, Obsessive-Compulsive, and Related Disorders: Clinical Presentation",
@@ -421,14 +389,6 @@
         "description": "",
         "start": "2026-03-06T14:00:00+00:00",
         "end": "2026-03-06T17:00:00+00:00",
-        "location": "N/A"
-    },
-    {
-        "lecture_name": "VACATION WEEK",
-        "lecturer_name": "Unknown",
-        "description": "",
-        "start": "2026-03-09",
-        "end": "2026-03-14",
         "location": "N/A"
     }
 ]
