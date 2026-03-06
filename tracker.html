@@ -482,6 +482,55 @@
             </form>
         </div>
     </div>
+
+    <!-- Batch Exam Log Modal -->
+    <div id="exam-log-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
+            <h3 class="text-2xl font-bold mb-6 text-slate-800">Batch Exam Log</h3>
+            <p class="text-xs text-slate-500 mb-6 leading-relaxed">Log exam scores for all lectures within a specific date range. Mastery is weighted by platform difficulty.</p>
+            <form id="exam-log-form" class="space-y-5">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Start Date</label>
+                        <input type="date" id="exam-log-start-date" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">End Date</label>
+                        <input type="date" id="exam-log-end-date" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Testing Platform</label>
+                    <select id="exam-log-platform" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-semibold">
+                        <option value="Gemini">Gemini (0.7x)</option>
+                        <option value="Gemini-Hard">Gemini-Hard (1.0x)</option>
+                        <option value="Perplexity">Perplexity (0.7x)</option>
+                        <option value="Perplexity-Hard">Perplexity-Hard (1.0x)</option>
+                        <option value="USMLE-Rx">USMLE-Rx (0.9x)</option>
+                        <option value="AMBOSS">AMBOSS (1.0x)</option>
+                        <option value="UWorld" selected>UWorld (1.0x)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Eval Score (0.0-1.0)</label>
+                        <input type="number" step="0.01" min="0" max="1" id="exam-log-eval-score" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="e.g. 0.72">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Causal Score (0-10)</label>
+                        <input type="number" step="0.1" min="0" max="10" id="exam-log-causal-score" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="Sp3 equivalent">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" id="cancel-exam-log-modal" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">Batch Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
         </div>
     </div>
 <script>
@@ -1376,7 +1425,8 @@
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold">Pass History</h2>
                     <div class="flex gap-2 ${this._isAllBlocks ? 'hidden' : ''}">
-                        <button onclick="openBulkLog()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Bulk Log</button>
+                        <button onclick="openExamLog()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Exam Log</button>
+                        <button onclick="openBulkLog()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Bulk Log</button>
                         <button onclick="openLogLecture()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Log Lecture</button>
                         <button onclick="openLogPass()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Log New Pass</button>
                     </div>
@@ -1850,6 +1900,12 @@
                 document.getElementById('log-lecture-date').value = getFormattedDatetimeNow();
                 populateLogLectureDropdown();
             }
+            if (id === 'exam-log-modal') {
+                // Initialize dates to current block/month or just today
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('exam-log-start-date').value = today;
+                document.getElementById('exam-log-end-date').value = today;
+            }
         } else {
             // Cleanup logic when CLOSING
             const form = el.querySelector('form');
@@ -1957,6 +2013,79 @@
 
     function openLogLecture() {
         toggleModal('log-lecture-modal');
+    }
+
+    function openExamLog() {
+        toggleModal('exam-log-modal');
+    }
+
+    function handleExamLogSubmit(e) {
+        e.preventDefault();
+        const startDate = document.getElementById('exam-log-start-date').value;
+        const endDate = document.getElementById('exam-log-end-date').value;
+        const platform = document.getElementById('exam-log-platform').value;
+        const evalScore = parseFloat(document.getElementById('exam-log-eval-score').value);
+        const causalScore = parseFloat(document.getElementById('exam-log-causal-score').value);
+
+        if (!startDate || !endDate) {
+            alert("Please select a valid date range.");
+            return;
+        }
+
+        const platformWeights = {
+            'Gemini': 0.7,
+            'Gemini-Hard': 1.0,
+            'Perplexity': 0.7,
+            'Perplexity-Hard': 1.0,
+            'USMLE-Rx': 0.9,
+            'AMBOSS': 1.0,
+            'UWorld': 1.0
+        };
+
+        const weight = platformWeights[platform] || 1.0;
+        
+        // Final scores are scaled by the platform weight
+        const finalQuiz = (evalScore * 10) * weight;
+        const finalSp3 = causalScore * weight;
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Include the full end day
+
+        // Find lectures in range
+        const targetLectures = state.lectures.filter(l => {
+            const lDate = new Date(l.date);
+            return lDate >= start && lDate <= end;
+        });
+
+        if (targetLectures.length === 0) {
+            alert("No lectures found in the specified date range.");
+            return;
+        }
+
+        if (!confirm(`Found ${targetLectures.length} lectures in range. This will log a pass for all associated topics. Proceed?`)) {
+            return;
+        }
+
+        let passCount = 0;
+        targetLectures.forEach(lecture => {
+            lecture.topics.forEach(topicId => {
+                state.passes.push({
+                    id: 'p' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    topicId: topicId,
+                    sp3: parseFloat(finalSp3.toFixed(2)),
+                    quiz: parseFloat(finalQuiz.toFixed(2)),
+                    date: new Date().toISOString().slice(0, 16),
+                    note: `[Exam: ${platform}] ${lecture.title}`
+                });
+                passCount++;
+            });
+        });
+
+        toggleModal('exam-log-modal');
+        save();
+        render();
+        alert(`Successfully logged ${passCount} topic passes across ${targetLectures.length} lectures.`);
     }
 
     function populateLogLectureDropdown() {
@@ -2467,6 +2596,7 @@ function handleBlockSubmit(e) {
         document.getElementById('set-goal-form').addEventListener('submit', handleGoalSubmit);
         document.getElementById('add-block-form').addEventListener('submit', handleBlockSubmit);
         document.getElementById('log-lecture-form').addEventListener('submit', handleLogLectureSubmit);
+        document.getElementById('exam-log-form').addEventListener('submit', handleExamLogSubmit);
 
         // Modals & Cancel Buttons
         document.getElementById('cancel-topic-modal').addEventListener('click', () => toggleModal('topic-modal'));
@@ -2475,6 +2605,7 @@ function handleBlockSubmit(e) {
         document.getElementById('cancel-goal-modal').addEventListener('click', () => toggleModal('goal-modal'));
         document.getElementById('cancel-block-modal').addEventListener('click', () => toggleModal('block-modal'));
         document.getElementById('cancel-log-lecture-modal').addEventListener('click', () => toggleModal('log-lecture-modal'));
+        document.getElementById('cancel-exam-log-modal').addEventListener('click', () => toggleModal('exam-log-modal'));
 
         // Bulk Log Events
         const bulkLogBtn = document.getElementById('bulk-log-btn');

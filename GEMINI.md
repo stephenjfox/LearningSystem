@@ -99,3 +99,10 @@ You are an expert in building fast, robust, browser-based applications using **v
 - Add comments explaining “why,” not “what,” and choose clarity when uncertain. 
 - Prefer simpler approaches that meet requirements and reduce long-term maintenance burden. 
 
+## Structural Analysis & Refactoring (ast-grep)
+- Use `ast-grep` (or `sg`) for structural code analysis, searching, and refactoring where regex-based `rg` is insufficient.
+- Prefer `ast-grep scan` for rule-based analysis and `ast-grep run` for one-off patterns.
+- Leverage `transform` in YAML rules for meta-variable manipulation (replace, substring, convert).
+- Use `selector` and `context` in pattern objects to resolve parsing ambiguity (e.g., distinguishing between class fields and assignments).
+- Reference the AST kinds via the playground or `ast-grep run --debug-query` to build precise rules.
+
