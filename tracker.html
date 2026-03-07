@@ -485,11 +485,20 @@
 
     <!-- Batch Exam Log Modal -->
     <div id="exam-log-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl">
-            <h3 class="text-2xl font-bold mb-6 text-slate-800">Batch Exam Log</h3>
-            <p class="text-xs text-slate-500 mb-6 leading-relaxed">Log exam scores for all lectures within a specific date range. Mastery is weighted by platform difficulty.</p>
-            <form id="exam-log-form" class="space-y-5">
-                <div class="grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex-shrink-0">
+                <h3 class="text-2xl font-bold mb-4 text-slate-800">Batch Exam Log</h3>
+                
+                <!-- Toggle Mode -->
+                <div class="flex bg-slate-100 p-1 rounded-xl mb-4">
+                    <button type="button" id="exam-mode-date" class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition-all" onclick="toggleExamLogMode('date')">Date Range</button>
+                    <button type="button" id="exam-mode-lecture" class="flex-1 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 transition-all" onclick="toggleExamLogMode('lecture')">Select Lectures</button>
+                </div>
+                
+                <p class="text-xs text-slate-500 mb-6 leading-relaxed" id="exam-log-desc">Log exam scores for all lectures within a specific date range. Mastery is weighted by platform difficulty.</p>
+            </div>
+            <form id="exam-log-form" class="space-y-5 flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div id="exam-log-date-inputs" class="grid grid-cols-2 gap-4 flex-shrink-0">
                     <div>
                         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Start Date</label>
                         <input type="date" id="exam-log-start-date" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
@@ -500,7 +509,21 @@
                     </div>
                 </div>
                 
-                <div>
+                <!-- Lecture Mode Inputs -->
+                <div id="exam-log-lecture-inputs" class="hidden flex-1 flex flex-col min-h-0 border border-slate-200 rounded-xl overflow-hidden mb-2">
+                    <div class="p-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                        <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pl-2">
+                            <input type="checkbox" id="exam-lecture-select-all" class="w-4 h-4 text-indigo-600 rounded" onchange="toggleAllExamLectures(this.checked)">
+                            Select All
+                        </label>
+                        <span id="exam-lecture-count" class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">0 Selected</span>
+                    </div>
+                    <div id="exam-lecture-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scroll bg-slate-50/30">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <div class="flex-shrink-0">
                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Testing Platform</label>
                     <select id="exam-log-platform" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-semibold">
                         <option value="Gemini">Gemini (0.7x)</option>
@@ -635,10 +658,10 @@
             const activeView = this.getAttribute('active-view');
             const navItems = [
                 { id: 'dashboard', label: 'Topic Mastery' },
-                { id: 'checklist', label: 'Lecture Checklist' },
+                { id: 'history', label: 'Pass History & Logging' },
                 { id: 'lectures', label: 'Lecture Catalog' },
+                { id: 'checklist', label: 'Ingestion Checklist' },
                 { id: 'import', label: 'Import Lectures' },
-                { id: 'history', label: 'Pass History' },
                 { id: 'walkthrough', label: 'Walkthrough' }
             ];
             this.innerHTML = `
@@ -1211,6 +1234,10 @@
     customElements.define('topic-mastery-view', TopicMasteryView);
 
     class IngestionChecklistView extends HTMLElement {
+        constructor() {
+            super();
+            this._statusFilter = 'pending';
+        }
         set data({ state, lectures }) {
             this._state = state;
             this._lectures = lectures;
@@ -1218,12 +1245,22 @@
         }
         connectedCallback() {
             this.addEventListener('change', (e) => {
-                if (e.target.classList.contains('toggle-ingested-check')) toggleIngested(e.target.dataset.id);
+                if (e.target.classList.contains('toggle-ingested-check')) {
+                    toggleIngested(e.target.dataset.id);
+                } else if (e.target.id === 'checklist-status-filter') {
+                    this._statusFilter = e.target.value;
+                    this.render();
+                }
             });
         }
         render() {
             if (!this._state) return;
-            const tableRows = [...this._lectures].sort((a, b) => new Date(b.date) - new Date(a.date)).map(l => {
+            
+            let filteredLectures = [...this._lectures];
+            if (this._statusFilter === 'ingested') filteredLectures = filteredLectures.filter(l => l.ingested);
+            if (this._statusFilter === 'pending') filteredLectures = filteredLectures.filter(l => !l.ingested);
+            
+            const tableRows = filteredLectures.sort((a, b) => new Date(b.date) - new Date(a.date)).map(l => {
                 const topicBadges = l.topics.map(tid => {
                     const topic = this._state.topics.find(t => t.id === tid);
                     return topic ? `<span class="bg-indigo-50 text-indigo-600 text-[10px] px-2 py-0.5 rounded mr-1">${topic.name}</span>` : '';
@@ -1243,6 +1280,16 @@
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-slate-800">Ingestion Checklist</h2>
                     <p class="text-xs text-slate-400 italic">"Table stakes" documentation of lecture ingestion.</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl card-shadow border border-slate-100 flex flex-wrap gap-4 items-end mb-6 mt-6">
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Status Filter</label>
+                        <select id="checklist-status-filter" class="w-full bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm">
+                            <option value="all" ${this._statusFilter === 'all' ? 'selected' : ''}>All Lectures</option>
+                            <option value="pending" ${this._statusFilter === 'pending' ? 'selected' : ''}>Pending</option>
+                            <option value="ingested" ${this._statusFilter === 'ingested' ? 'selected' : ''}>Ingested</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="bg-white rounded-2xl card-shadow border border-slate-100 overflow-hidden">
                     <table class="w-full text-left">
@@ -1299,7 +1346,7 @@
                 if (btn.classList.contains('delete-lecture-btn')) deleteLecture(btn.dataset.id);
             });
             this.addEventListener('input', (e) => {
-                if (['lecture-search', 'lecture-sort', 'lecture-topic-filter', 'lecture-date-from', 'lecture-date-to'].includes(e.target.id)) {
+                if (['lecture-search', 'lecture-sort', 'lecture-topic-filter', 'lecture-status-filter', 'lecture-date-from', 'lecture-date-to'].includes(e.target.id)) {
                     this.renderGrid();
                 }
             });
@@ -1333,6 +1380,14 @@
                             ${topicOptions}
                         </select>
                     </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Status Filter</label>
+                        <select id="lecture-status-filter" class="w-full bg-slate-50 border border-slate-200 p-2 rounded-lg text-sm">
+                            <option value="all">All Lectures</option>
+                            <option value="pending" selected>Pending</option>
+                            <option value="ingested">Ingested</option>
+                        </select>
+                    </div>
                     <div class="flex gap-4">
                         <div class="min-w-[130px]">
                             <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">From Date</label>
@@ -1355,6 +1410,7 @@
             const search = this.querySelector('#lecture-search').value.toLowerCase();
             const sort = this.querySelector('#lecture-sort').value;
             const topicFilter = this.querySelector('#lecture-topic-filter').value;
+            const statusFilter = this.querySelector('#lecture-status-filter').value;
             const dateFrom = this.querySelector('#lecture-date-from').value;
             const dateTo = this.querySelector('#lecture-date-to').value;
 
@@ -1362,12 +1418,13 @@
                 const matchesSearch = l.title.toLowerCase().includes(search) ||
                                     l.topics.some(tid => this._state.topics.find(t => t.id === tid)?.name.toLowerCase().includes(search));
                 const matchesTopic = topicFilter === 'all' || l.topics.includes(topicFilter);
+                const matchesStatus = statusFilter === 'all' ? true : (statusFilter === 'ingested' ? l.ingested : !l.ingested);
 
                 const lectureDate = new Date(l.date);
                 const matchesDateFrom = !dateFrom || lectureDate >= new Date(dateFrom);
                 const matchesDateTo = !dateTo || lectureDate <= new Date(dateTo);
 
-                return matchesSearch && matchesTopic && matchesDateFrom && matchesDateTo;
+                return matchesSearch && matchesTopic && matchesStatus && matchesDateFrom && matchesDateTo;
             });
 
             filtered.sort((a, b) => {
@@ -2019,18 +2076,89 @@
         toggleModal('exam-log-modal');
     }
 
+    let currentExamMode = 'date'; // 'date' or 'lecture'
+
+    function toggleExamLogMode(mode) {
+        currentExamMode = mode;
+        const dateBtn = document.getElementById('exam-mode-date');
+        const lectureBtn = document.getElementById('exam-mode-lecture');
+        const dateInputs = document.getElementById('exam-log-date-inputs');
+        const lectureInputs = document.getElementById('exam-log-lecture-inputs');
+        const desc = document.getElementById('exam-log-desc');
+
+        if (mode === 'date') {
+            dateBtn.classList.replace('text-slate-500', 'text-indigo-600');
+            dateBtn.classList.add('bg-white', 'shadow-sm');
+            lectureBtn.classList.replace('text-indigo-600', 'text-slate-500');
+            lectureBtn.classList.remove('bg-white', 'shadow-sm');
+            
+            dateInputs.classList.remove('hidden');
+            lectureInputs.classList.add('hidden');
+            desc.innerText = "Log exam scores for all lectures within a specific date range. Mastery is weighted by platform difficulty.";
+            
+            // Re-require dates
+            document.getElementById('exam-log-start-date').required = true;
+            document.getElementById('exam-log-end-date').required = true;
+        } else {
+            lectureBtn.classList.replace('text-slate-500', 'text-indigo-600');
+            lectureBtn.classList.add('bg-white', 'shadow-sm');
+            dateBtn.classList.replace('text-indigo-600', 'text-slate-500');
+            dateBtn.classList.remove('bg-white', 'shadow-sm');
+            
+            dateInputs.classList.add('hidden');
+            lectureInputs.classList.remove('hidden');
+            desc.innerText = "Log exam scores for specifically selected lectures. Mastery is weighted by platform difficulty.";
+            
+            // Un-require dates since they are hidden
+            document.getElementById('exam-log-start-date').required = false;
+            document.getElementById('exam-log-end-date').required = false;
+            
+            populateExamLectureList();
+        }
+    }
+
+    function populateExamLectureList() {
+        const listEl = document.getElementById('exam-lecture-list');
+        const isAll = state.activeBlockId === 'all';
+        const lectures = isAll ? state.lectures : state.lectures.filter(l => l.blockId === state.activeBlockId);
+        
+        // Sort by date desc
+        lectures.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        listEl.innerHTML = lectures.map(l => `
+            <label class="flex items-start gap-3 p-2 bg-white rounded-lg border border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors">
+                <input type="checkbox" value="${l.id}" class="exam-lecture-checkbox mt-1 w-4 h-4 text-indigo-600 rounded">
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-800 leading-tight truncate">${l.title}</p>
+                    <p class="text-[9px] font-mono text-slate-400 uppercase tracking-widest">${l.date}</p>
+                </div>
+            </label>
+        `).join('') || '<p class="text-xs text-slate-400 italic p-4 text-center">No lectures found.</p>';
+        updateExamLectureCount();
+
+        // Add listeners to checkboxes
+        listEl.querySelectorAll('.exam-lecture-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateExamLectureCount);
+        });
+    }
+
+    function toggleAllExamLectures(checked) {
+        const checkboxes = document.querySelectorAll('.exam-lecture-checkbox');
+        checkboxes.forEach(cb => cb.checked = checked);
+        updateExamLectureCount();
+    }
+
+    function updateExamLectureCount() {
+        const count = document.querySelectorAll('.exam-lecture-checkbox:checked').length;
+        document.getElementById('exam-lecture-count').innerText = `${count} Selected`;
+    }
+
     function handleExamLogSubmit(e) {
         e.preventDefault();
-        const startDate = document.getElementById('exam-log-start-date').value;
-        const endDate = document.getElementById('exam-log-end-date').value;
+        
         const platform = document.getElementById('exam-log-platform').value;
         const evalScore = parseFloat(document.getElementById('exam-log-eval-score').value);
         const causalScore = parseFloat(document.getElementById('exam-log-causal-score').value);
-
-        if (!startDate || !endDate) {
-            alert("Please select a valid date range.");
-            return;
-        }
 
         const platformWeights = {
             'Gemini': 0.7,
@@ -2048,22 +2176,41 @@
         const finalQuiz = (evalScore * 10) * weight;
         const finalSp3 = causalScore * weight;
 
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999); // Include the full end day
+        let targetLectures = [];
 
-        // Find lectures in range
-        const targetLectures = state.lectures.filter(l => {
-            const lDate = new Date(l.date);
-            return lDate >= start && lDate <= end;
-        });
+        if (currentExamMode === 'date') {
+            const startDate = document.getElementById('exam-log-start-date').value;
+            const endDate = document.getElementById('exam-log-end-date').value;
+            
+            if (!startDate || !endDate) {
+                alert("Please select a valid date range.");
+                return;
+            }
+            
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999); // Include the full end day
 
-        if (targetLectures.length === 0) {
-            alert("No lectures found in the specified date range.");
-            return;
+            targetLectures = state.lectures.filter(l => {
+                const lDate = new Date(l.date);
+                return lDate >= start && lDate <= end;
+            });
+
+            if (targetLectures.length === 0) {
+                alert("No lectures found in the specified date range.");
+                return;
+            }
+        } else {
+            // Lecture mode
+            const checkedIds = Array.from(document.querySelectorAll('.exam-lecture-checkbox:checked')).map(cb => cb.value);
+            if (checkedIds.length === 0) {
+                alert("Please select at least one lecture.");
+                return;
+            }
+            targetLectures = state.lectures.filter(l => checkedIds.includes(l.id));
         }
 
-        if (!confirm(`Found ${targetLectures.length} lectures in range. This will log a pass for all associated topics. Proceed?`)) {
+        if (!confirm(`Found ${targetLectures.length} lectures. This will log a pass for all associated topics. Proceed?`)) {
             return;
         }
 
