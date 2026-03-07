@@ -231,6 +231,9 @@
         .bg-blue-600 {
             background-color: steelblue;
         }
+        .max-h-\[85vh\] { max-height: 85vh; }
+        .max-h-\[90vh\] { max-height: 90vh; }
+        
         mastery-stats, block-controls, app-navigation, priority-sidebar,
         topic-mastery-view, ingestion-checklist-view, lecture-catalog-view,
         pass-history-view, walkthrough-view {
@@ -485,7 +488,7 @@
 
     <!-- Batch Exam Log Modal -->
     <div id="exam-log-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="bg-white rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden transition-all">
             <div class="flex-shrink-0">
                 <h3 class="text-2xl font-bold mb-4 text-slate-800">Batch Exam Log</h3>
                 
@@ -497,7 +500,7 @@
                 
                 <p class="text-xs text-slate-500 mb-6 leading-relaxed" id="exam-log-desc">Log exam scores for all lectures within a specific date range. Mastery is weighted by platform difficulty.</p>
             </div>
-            <form id="exam-log-form" class="space-y-5 flex-1 flex flex-col min-h-0 overflow-hidden">
+            <form id="exam-log-form" class="flex-1 flex flex-col min-h-0 overflow-hidden gap-5 mt-2">
                 <div id="exam-log-date-inputs" class="grid grid-cols-2 gap-4 flex-shrink-0">
                     <div>
                         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Start Date</label>
@@ -536,7 +539,7 @@
                     </select>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-4 flex-shrink-0">
                     <div>
                         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Eval Score (0.0-1.0)</label>
                         <input type="number" step="0.01" min="0" max="1" id="exam-log-eval-score" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="e.g. 0.72">
@@ -547,7 +550,7 @@
                     </div>
                 </div>
 
-                <div class="flex gap-3 pt-4">
+                <div class="flex gap-3 pt-4 flex-shrink-0 mt-auto">
                     <button type="button" id="cancel-exam-log-modal" class="flex-1 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
                     <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">Batch Log</button>
                 </div>
