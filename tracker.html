@@ -816,6 +816,7 @@
             this._activeTopics = [];
             this._isSmartImport = false;
         }
+
         set data({ state, activeTopics }) {
             this._state = state;
             // Initialize working copies on first load of a step
@@ -825,7 +826,50 @@
             }
             this.render();
         }
-        connectedCallback() { this.render(); }
+
+        connectedCallback() {
+            this.render();
+            this.addEventListener('dragover', (e) => {
+                const dropzone = e.target.closest('#import-dropzone');
+                if (dropzone) {
+                    e.preventDefault();
+                    dropzone.classList.add('border-indigo-500', 'bg-indigo-50');
+                }
+            });
+            this.addEventListener('dragleave', (e) => {
+                const dropzone = e.target.closest('#import-dropzone');
+                if (dropzone) {
+                    dropzone.classList.remove('border-indigo-500', 'bg-indigo-50');
+                }
+            });
+            this.addEventListener('drop', (e) => {
+                const dropzone = e.target.closest('#import-dropzone');
+                if (dropzone) {
+                    e.preventDefault();
+                    dropzone.classList.remove('border-indigo-500', 'bg-indigo-50');
+                    const file = e.dataTransfer.files[0];
+                    if (file) this.handleFile(file);
+                }
+            });
+        }
+
+        handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) this.handleFile(file);
+        }
+
+        handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                const textarea = this.querySelector('#import-json-textarea');
+                if (textarea) {
+                    textarea.value = content;
+                    this.handleParse();
+                }
+            };
+            reader.readAsText(file);
+        }
 
         prevStep() { if (this._step > 1) { this._step--; this.render(); } }
         nextStep() { if (this._step < 4) { this._step++; this.render(); } }
@@ -1017,8 +1061,19 @@
                 <div class="space-y-6">
                     <div class="bg-white p-8 rounded-3xl card-shadow border border-slate-100">
                         <h3 class="text-lg font-bold text-slate-800 mb-2">Step 1: Data Input</h3>
-                        <p class="text-sm text-slate-500 mb-6">Paste the JSON array of lecture objects. We now support pre-defined subjects and multiple topics!</p>
-                        <textarea id="import-json-textarea" class="w-full h-80 p-4 font-mono text-xs border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder='[
+                        <p class="text-sm text-slate-500 mb-6">Drag and drop a JSON file or paste the lecture objects below.</p>
+                        
+                        <div id="import-dropzone" class="border-2 border-dashed border-slate-200 rounded-2xl p-8 mb-6 text-center transition-all">
+                            <input type="file" id="file-input" class="hidden" accept=".json" onchange="this.closest('lecture-import-view').handleFileSelect(event)">
+                            <div class="flex flex-col items-center gap-2">
+                                <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Drop JSON File Here</p>
+                                <p class="text-[10px] text-slate-300">OR</p>
+                                <button onclick="this.parentElement.querySelector('#file-input').click()" class="text-xs font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest underline underline-offset-4">Browse Files</button>
+                            </div>
+                        </div>
+
+                        <textarea id="import-json-textarea" class="w-full h-60 p-4 font-mono text-xs border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder='[
   {
     "lecture_name": "...",
     "subject": "...",
