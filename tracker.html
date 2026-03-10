@@ -1682,7 +1682,7 @@
         connectedCallback() {
             if (this._isFSRS === undefined) {
                 // Initial render with default if data hasn't been set yet
-                this._isFSRS = (typeof state !== 'undefined' && state.goals && state.goals.algorithm === 'fsrs');
+                this._isFSRS = false;
             }
             this.render();
         }
