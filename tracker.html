@@ -1316,7 +1316,7 @@
                             <tr class="bg-slate-50 border-b border-slate-100">
                                 <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Topic</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center hidden md:table-cell">Subject</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Mi</th>
+                                <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">${this._isFSRS ? 'Retrievability' : 'Mi'}</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                             </tr>
                         </thead>
@@ -1619,13 +1619,30 @@
     customElements.define('pass-history-view', PassHistoryView);
 
     class WalkthroughView extends HTMLElement {
-        static get template() {
-            return `
+        set data({ isFSRS }) {
+            this._isFSRS = isFSRS;
+            this.render();
+        }
+
+        connectedCallback() {
+            if (this._isFSRS === undefined) {
+                // Initial render with default if data hasn't been set yet
+                this._isFSRS = (typeof state !== 'undefined' && state.goals && state.goals.algorithm === 'fsrs');
+            }
+            this.render();
+        }
+
+        render() {
+            const isFSRS = this._isFSRS;
+            const threshold = isFSRS ? "70%" : "7.0";
+            const unit = isFSRS ? "%" : "";
+            
+            this.innerHTML = `
                 <div class="max-w-4xl mx-auto pb-20">
                     <div class="bg-indigo-600 rounded-3xl p-8 text-white card-shadow mb-8 text-center relative overflow-hidden">
                         <div class="relative z-10">
                             <h2 class="text-3xl font-black mb-2">The Learning System</h2>
-                            <p class="text-indigo-100 font-medium">From First Principles to High-Yield Synthesis</p>
+                            <p class="text-indigo-100 font-medium">${isFSRS ? 'FSRS-Powered Spaced Repetition' : 'From First Principles to High-Yield Synthesis'}</p>
                         </div>
                         <div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full"></div>
                     </div>
@@ -1651,14 +1668,20 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="bg-white rounded-2xl p-6 border border-slate-100 card-shadow">
                                     <h4 class="font-bold text-slate-800 text-lg mb-2">Mastery Optimization (MOF)</h4>
-                                    <p class="text-slate-600 text-sm mb-4">Objective: Maximize the <b>Harmonic Mean (Mh)</b> of your topic mastery scores. Unlike the average, Mh is punitively sensitive to low values, forcing you to address your weakest topics first.</p>
+                                    <p class="text-slate-600 text-sm mb-4">Objective: Maximize the <b>Harmonic Mean (Mh)</b> of your topic ${isFSRS ? 'retrievability' : 'mastery scores'}. Unlike the average, Mh is punitively sensitive to low values, forcing you to address your weakest topics first.</p>
                                     <code class="block bg-slate-50 p-3 rounded-lg text-xs font-mono text-indigo-600">Mh = T / Σ(1/Mi)</code>
                                 </div>
                                 <div class="bg-white rounded-2xl p-6 border border-slate-100 card-shadow">
                                     <h4 class="font-bold text-slate-800 text-lg mb-2">Completion Velocity (CCV)</h4>
-                                    <p class="text-slate-600 text-sm mb-4">Objective: Measure how efficiently you move topics past the <b>D-Min (Mastery Threshold of 7.0)</b>. If velocity is low, debug your learning process.</p>
+                                    <p class="text-slate-600 text-sm mb-4">Objective: Measure how efficiently you move topics past the <b>D-Min (Mastery Threshold of ${threshold})</b>. If velocity is low, debug your learning process.</p>
                                     <code class="block bg-slate-50 p-3 rounded-lg text-xs font-mono text-indigo-600">Vc = T_Mastered / Total_Time</code>
                                 </div>
+                                ${isFSRS ? `
+                                <div class="bg-indigo-50/50 rounded-2xl p-6 border border-indigo-100 md:col-span-2">
+                                    <h4 class="font-bold text-indigo-800 text-lg mb-2">FSRS Algorithm</h4>
+                                    <p class="text-indigo-700 text-sm">You are using the <b>Free Spaced Repetition Scheduler</b>. Topic mastery is calculated as <b>Retrievability (R)</b>—the probability you can recall the content today. R decays over time and increases with successful reviews (Passes 1-4).</p>
+                                </div>
+                                ` : ''}
                             </div>
                         </section>
 
@@ -1795,12 +1818,12 @@
                                                     <td class="py-3 pr-4 font-bold text-slate-800">3</td>
                                                     <td class="py-3 px-4 font-medium">15m</td>
                                                     <td class="py-3 px-4"><b>Synthesis (Pass 3)</b><br>Generate a complete Clinical Vignette from a single molecular defect. Predict labs, signs, and treatment.</td>
-                                                    <td class="py-3 pl-4"><b>Assessment:</b> Determine your Mi score. If you can't synthesize, Mi < 7.</td>
+                                                    <td class="py-3 pl-4"><b>Assessment:</b> ${isFSRS ? 'Determine your FSRS Grade. If you can\'t synthesize, Grade = 1 (Again).' : 'Determine your Mi score. If you can\'t synthesize, Mi < 7.'}</td>
                                                 </tr>
                                                 <tr>
                                                     <td class="py-3 pr-4 font-bold text-slate-800">Post</td>
                                                     <td class="py-3 px-4 font-medium">5m</td>
-                                                    <td class="py-3 px-4"><b>Self-Correction</b><br>Metacognition: Where did the explanation fall apart? Assign confience-based score.</td>
+                                                    <td class="py-3 px-4"><b>Self-Correction</b><br>Metacognition: Where did the explanation fall apart? Assign confidence-based score.</td>
                                                     <td class="py-3 pl-4"><b>Strategy:</b> Feed data back into MOF to choose the next topic.</td>
                                                 </tr>
                                             </tbody>
@@ -1888,8 +1911,6 @@
                 </div>
             `;
         }
-        connectedCallback() { this.render(); }
-        render() { this.innerHTML = WalkthroughView.template; }
     }
     customElements.define('walkthrough-view', WalkthroughView);
 
@@ -2826,6 +2847,9 @@ function handleBlockSubmit(e) {
 
         const history = document.getElementById('view-history');
         if (history) history.data = { state, activeTopics, isAllBlocks, isFSRS };
+
+        const walkthrough = document.getElementById('view-walkthrough');
+        if (walkthrough) walkthrough.data = { isFSRS };
 
         const importView = document.getElementById('view-import');
         if (importView) importView.data = { state, activeTopics };
