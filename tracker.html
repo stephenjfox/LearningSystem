@@ -400,6 +400,9 @@ textarea.input { resize: vertical; font-family: var(--font-sans); }
   .grid-12 { grid-template-columns: 260px 1fr; }
 }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+@media (max-width: 1023px) {
+  .stat-grid.stat-grid-stacked { grid-template-columns: 1fr; gap: 0.75rem; }
+}
 
 /* ========== MOBILE DRAWER ========== */
 @media (max-width: 1023px) {
@@ -446,6 +449,44 @@ textarea.input { resize: vertical; font-family: var(--font-sans); }
 /* ========== PROGRESS BAR ========== */
 .progress-bar { width: 100%; height: 8px; background: var(--badge-bg); border-radius: 9999px; overflow: hidden; }
 .progress-fill { height: 100%; background: var(--accent); transition: width 1s ease; border-radius: 9999px; }
+
+/* ========== GAUGE BARS (MapleStory-inspired) ========== */
+.gauge {
+  position: relative; height: 22px; border-radius: 4px; overflow: hidden;
+  background: var(--input-bg); border: 1.5px solid var(--surface-border);
+  min-width: 80px;
+}
+.gauge-fill {
+  position: absolute; inset: 1px; border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.22,1,0.36,1);
+  background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 40%, rgba(0,0,0,0.15) 100%);
+}
+.gauge-fill.gauge-mh      { background: linear-gradient(180deg, #a78bfa 0%, #6366f1 40%, #4338ca 100%); }
+.gauge-fill.gauge-success  { background: linear-gradient(180deg, #6ee7b7 0%, #10b981 40%, #047857 100%); }
+.gauge-fill.gauge-info     { background: linear-gradient(180deg, #93c5fd 0%, #3b82f6 40%, #1d4ed8 100%); }
+.gauge-fill.gauge-warning  { background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 40%, #b45309 100%); }
+.gauge-fill.gauge-danger   { background: linear-gradient(180deg, #fca5a5 0%, #ef4444 40%, #b91c1c 100%); }
+.gauge-fill.gauge-hp       { background: linear-gradient(180deg, #86efac 0%, #22c55e 40%, #15803d 100%); }
+.gauge-label {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font-size: 0.625rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  letter-spacing: 0.03em; z-index: 1;
+}
+.gauge-stat-card {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.gauge-stat-card .gauge { height: 26px; border-radius: 5px; }
+.gauge-stat-card .gauge-label { font-size: 0.6875rem; }
+
+/* Inline gauge for table rows */
+.gauge-inline { height: 18px; min-width: 70px; max-width: 110px; display: inline-block; vertical-align: middle; border-radius: 3px; }
+.gauge-inline .gauge-label { font-size: 0.5625rem; }
+
+/* Sidebar gauge */
+.gauge-sidebar { height: 14px; border-radius: 3px; margin-top: 4px; }
+.gauge-sidebar .gauge-label { font-size: 0.5rem; }
 
 /* ========== TOPIC DETAIL PANEL ========== */
 .detail-panel {
@@ -575,6 +616,11 @@ button, a, input, select, textarea { transition: all var(--transition); }
         <select id="block-select" onchange="handleBlockChange(this.value)" class="select-input" style="min-width:200px;max-width:280px"></select>
         <button onclick="renameActiveBlock()" id="rename-block-btn" class="btn btn-ghost btn-sm" title="Rename Block">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+        </button>
+        <!-- Display mode toggle -->
+        <button onclick="toggleDisplayMode()" class="btn btn-ghost btn-sm" id="display-mode-btn" title="Toggle gauge/fraction view">
+          <svg id="dm-icon-fraction" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="17" height="12" rx="2"/><rect x="5" y="9" width="8" height="6" rx="1" fill="currentColor" opacity="0.35"/><path d="M19 10h2a1 1 0 011 1v2a1 1 0 01-1 1h-2" stroke-width="2"/></svg>
+          <svg id="dm-icon-gauge" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" class="hidden"><text x="4" y="17" font-size="14" font-weight="700" fill="currentColor" stroke="none" font-family="system-ui">⅗</text></svg>
         </button>
         <!-- Theme toggle -->
         <button onclick="toggleTheme()" class="btn btn-ghost btn-sm" id="theme-toggle" title="Toggle theme">
@@ -999,6 +1045,7 @@ function init() {
     document.getElementById('migration-banner').classList.remove('hidden');
   }
   applyTheme();
+  applyDisplayMode();
   save();
   render();
 }
@@ -1161,6 +1208,37 @@ function applyTheme() {
 function toggleTheme() {
   state.settings.theme = state.settings.theme === 'dark' ? 'light' : 'dark';
   applyTheme(); save();
+}
+
+// ============================================================
+// DISPLAY MODE (Fraction vs Gauge)
+// ============================================================
+function getDisplayMode() { return state?.settings?.displayMode || 'fraction'; }
+
+function applyDisplayMode() {
+  const mode = getDisplayMode();
+  document.getElementById('dm-icon-fraction').classList.toggle('hidden', mode === 'gauge');
+  document.getElementById('dm-icon-gauge').classList.toggle('hidden', mode === 'fraction');
+}
+
+function toggleDisplayMode() {
+  if (!state.settings.displayMode) state.settings.displayMode = 'fraction';
+  state.settings.displayMode = state.settings.displayMode === 'fraction' ? 'gauge' : 'fraction';
+  applyDisplayMode(); save(); render();
+}
+
+function gaugeHTML(pct, label, colorClass, extraClass) {
+  const w = Math.max(0, Math.min(100, pct));
+  return `<div class="gauge ${extraClass||''}">
+    <div class="gauge-fill ${colorClass}" style="width:${w}%"></div>
+    <div class="gauge-label">${label}</div>
+  </div>`;
+}
+
+function gaugeColor(pct) {
+  if (pct >= 70) return 'gauge-hp';
+  if (pct >= 40) return 'gauge-warning';
+  return 'gauge-danger';
 }
 
 // ============================================================
@@ -1918,32 +1996,61 @@ function render() {
   const dueCount = activeTopics.filter(t => { const o = getTopicDaysOverdue(t); return o !== null && o >= 0; }).length;
   const masteredCount = activeTopics.filter(t => getTopicRetrievability(t) >= 0.7).length;
   const ingested = activeLectures.filter(l => l.ingested).length;
+  const target = activeBlock ? activeBlock.masteryGoal : 0;
 
-  document.getElementById('stat-cards').innerHTML = `
-    <div class="card p-4">
-      <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Harmonic Mean (Mh)</div>
-      <div class="flex items-baseline gap-2">
-        <span class="text-3xl font-black tabular-nums" style="color:var(--accent)">${mh.toFixed(1)}%</span>
-        <span class="text-xs font-bold" style="color:var(--text-muted)">/ ${activeBlock ? activeBlock.masteryGoal : 'Global'}%</span>
+  const isGauge = getDisplayMode() === 'gauge';
+  if (isGauge) {
+    const mhPct = target > 0 ? Math.min(100, mh / target * 100) : (mh > 0 ? Math.min(100, mh) : 0);
+    const masteredPct = activeTopics.length > 0 ? (masteredCount / activeTopics.length * 100) : 0;
+    const lecPct = activeLectures.length > 0 ? (ingested / activeLectures.length * 100) : 0;
+    const duePct = activeTopics.length > 0 ? Math.max(0, 100 - (dueCount / activeTopics.length * 100)) : 100;
+    document.getElementById('stat-cards').classList.add('stat-grid-stacked');
+    document.getElementById('stat-cards').innerHTML = `
+      <div class="card p-4 gauge-stat-card">
+        <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Harmonic Mean</div>
+        ${gaugeHTML(mhPct, mh.toFixed(1) + '% / ' + (activeBlock ? activeBlock.masteryGoal : '—') + '%', 'gauge-mh')}
+        ${!isAll ? '<button onclick="openGoalModal()" class="text-xs font-bold uppercase" style="color:var(--accent);background:none;border:none;cursor:pointer;padding:0;align-self:flex-start">Set Goal</button>' : ''}
       </div>
-      ${!isAll ? '<button onclick="openGoalModal()" class="text-xs font-bold uppercase mt-1" style="color:var(--accent);background:none;border:none;cursor:pointer">Set Goal</button>' : ''}
-    </div>
-    <div class="card p-4">
-      <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Due for Review</div>
-      <div class="text-3xl font-black tabular-nums" style="color:${dueCount>0?'var(--warning)':'var(--success)'}">${dueCount}</div>
-    </div>
-    <div class="card p-4">
-      <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Topics Mastered</div>
-      <div class="text-3xl font-black tabular-nums" style="color:var(--success)">${masteredCount} / ${activeTopics.length}</div>
-    </div>
-    <div class="card p-4">
-      <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Lecture Coverage</div>
-      <div class="text-3xl font-black tabular-nums" style="color:var(--info)">${ingested} / ${activeLectures.length}</div>
-    </div>
-  `;
+      <div class="card p-4 gauge-stat-card">
+        <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Review Status</div>
+        ${gaugeHTML(duePct, dueCount > 0 ? dueCount + ' due' : 'All clear', dueCount > 0 ? 'gauge-warning' : 'gauge-hp')}
+      </div>
+      <div class="card p-4 gauge-stat-card">
+        <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Topics Mastered</div>
+        ${gaugeHTML(masteredPct, masteredCount + ' / ' + activeTopics.length, 'gauge-success')}
+      </div>
+      <div class="card p-4 gauge-stat-card">
+        <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Lecture Coverage</div>
+        ${gaugeHTML(lecPct, ingested + ' / ' + activeLectures.length, 'gauge-info')}
+      </div>
+    `;
+  } else {
+    document.getElementById('stat-cards').classList.remove('stat-grid-stacked');
+    document.getElementById('stat-cards').innerHTML = `
+      <div class="card p-4">
+        <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Harmonic Mean (Mh)</div>
+        <div class="flex items-baseline gap-2">
+          <span class="text-3xl font-black tabular-nums" style="color:var(--accent)">${mh.toFixed(1)}%</span>
+          <span class="text-xs font-bold" style="color:var(--text-muted)">/ ${activeBlock ? activeBlock.masteryGoal : 'Global'}%</span>
+        </div>
+        ${!isAll ? '<button onclick="openGoalModal()" class="text-xs font-bold uppercase mt-1" style="color:var(--accent);background:none;border:none;cursor:pointer">Set Goal</button>' : ''}
+      </div>
+      <div class="card p-4">
+        <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Due for Review</div>
+        <div class="text-3xl font-black tabular-nums" style="color:${dueCount>0?'var(--warning)':'var(--success)'}">${dueCount}</div>
+      </div>
+      <div class="card p-4">
+        <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Topics Mastered</div>
+        <div class="text-3xl font-black tabular-nums" style="color:var(--success)">${masteredCount} / ${activeTopics.length}</div>
+      </div>
+      <div class="card p-4">
+        <div class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-muted)">Lecture Coverage</div>
+        <div class="text-3xl font-black tabular-nums" style="color:var(--info)">${ingested} / ${activeLectures.length}</div>
+      </div>
+    `;
+  }
 
   // Progress
-  const target = activeBlock ? activeBlock.masteryGoal : 0;
   const prog = document.getElementById('progress-section');
   if (target > 0 && !isAll) {
     prog.classList.remove('hidden');
@@ -2013,17 +2120,25 @@ function renderPrioritySidebar(activeTopics) {
     <div class="card p-5" style="background:var(--accent)">
       <h3 class="font-bold text-sm mb-3 uppercase tracking-wider" style="color:#fff">Top Priorities</h3>
       <div class="space-y-2">
-        ${priorities.map(p => `
+        ${priorities.map(p => {
+          const rPct = p.R * 100;
+          const sidebarGauge = getDisplayMode() === 'gauge'
+            ? `<div class="gauge gauge-sidebar" style="border-color:rgba(255,255,255,0.2);background:rgba(0,0,0,0.3)">
+                <div class="gauge-fill ${gaugeColor(rPct)}" style="width:${Math.max(0,Math.min(100,rPct))}%"></div>
+                <div class="gauge-label">${rPct.toFixed(0)}%</div>
+              </div>`
+            : '';
+          return `
           <div class="p-3 rounded-lg" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15)">
             <div class="text-xs font-bold uppercase" style="color:rgba(255,255,255,0.6)">${p.topic.subject || 'General'}</div>
             <div class="text-sm font-bold" style="color:#fff">${p.topic.name}</div>
+            ${sidebarGauge}
             <div class="flex justify-between items-center mt-1">
-              <span class="text-xs tabular-nums" style="color:rgba(255,255,255,0.7)">R: ${(p.R*100).toFixed(0)}%</span>
+              <span class="text-xs tabular-nums" style="color:rgba(255,255,255,0.7)">${getDisplayMode() === 'gauge' ? '' : 'R: ' + rPct.toFixed(0) + '%'}</span>
               <span class="pero-badge ${peroBadgeClass(p.phase)}" style="font-size:0.5625rem">${peroLabel(p.phase)}</span>
               <button onclick="openLogPassForTopic('${p.topic.id}')" class="btn btn-sm" style="background:#fff;color:var(--accent);padding:0.125rem 0.5rem;font-size:0.625rem">LOG</button>
             </div>
-          </div>
-        `).join('')}
+          </div>`;}).join('')}
       </div>
     </div>
   `;
@@ -2086,13 +2201,15 @@ function renderDashboard(activeTopics, isAll) {
               else if (t.fsrs.reviewCount > 0) { rowClass = 'row-healthy'; statusBadge = '<span class="badge badge-success">OK</span>'; }
               else { statusBadge = '<span class="badge badge-muted">New</span>'; }
               const tags = (t.tags||[]).map(tag => `<span class="badge badge-muted ml-1" style="font-size:0.5625rem">${tag}</span>`).join('');
+              const rPct = R * 100;
+              const rCell = getDisplayMode() === 'gauge'
+                ? gaugeHTML(rPct, rPct.toFixed(1) + '%', gaugeColor(rPct), 'gauge-inline')
+                : `<span class="font-bold tabular-nums" style="color:${R>=0.7?'var(--success)':R>=0.4?'var(--warning)':'var(--danger)'}">${rPct.toFixed(1)}%</span>`;
               return `<tr class="${rowClass} cursor-pointer" onclick="openDetail('${t.id}')">
                 <td class="font-bold">${t.name}${tags}</td>
                 <td class="text-center text-xs" style="color:var(--text-secondary)">${t.subject || ''}</td>
                 <td class="text-center"><span class="pero-badge ${peroBadgeClass(phase)}">${peroLabel(phase)}</span></td>
-                <td class="text-center">
-                  <span class="font-bold tabular-nums" style="color:${R>=0.7?'var(--success)':R>=0.4?'var(--warning)':'var(--danger)'}">${(R*100).toFixed(1)}%</span>
-                </td>
+                <td class="text-center">${rCell}</td>
                 <td class="text-center text-xs tabular-nums" style="color:var(--text-secondary)">${t.fsrs.nextReviewDate ? formatDateShort(t.fsrs.nextReviewDate) : '—'}</td>
                 <td class="text-center">${statusBadge}</td>
                 <td class="text-right" onclick="event.stopPropagation()">
@@ -2123,9 +2240,11 @@ function renderHistory(activeTopics, isAll) {
   const passes = state.passes.filter(p => tids.has(p.topicId)).sort((a,b) => new Date(b.date) - new Date(a.date));
 
   el.innerHTML = `
-    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-      <h2 class="text-xl font-bold">Pass History</h2>
-      <div class="flex gap-2 ${isAll?'hidden':''}">
+    <div class="mb-4">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-xl font-bold">Pass History</h2>
+      </div>
+      <div class="flex gap-2 flex-wrap ${isAll?'hidden':''}">
         <button onclick="openExamLog()" class="btn btn-accent btn-sm">Exam Log</button>
         <button onclick="openBulkLog()" class="btn btn-ghost btn-sm">Bulk Log</button>
         <button onclick="openLogLecture()" class="btn btn-ghost btn-sm">Log Lecture</button>
