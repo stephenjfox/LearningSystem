@@ -2057,6 +2057,7 @@ function render() {
     const pct = Math.min(100, Math.round(mh / target * 100));
     document.getElementById('progress-pct').textContent = pct + '%';
     document.getElementById('progress-fill').style.width = pct + '%';
+    // NOTE: big progress bar may be obsoleted by the collection of smaller bars.
     document.getElementById('progress-label').textContent = pct >= 100 ? 'Goal Met!' : `${(target - mh).toFixed(1)} points to go.`;
   } else prog.classList.add('hidden');
 
@@ -2307,7 +2308,7 @@ function renderLectureCatalog(lectures, activeTopics, isAll) {
         <div style="min-width:120px">
           <div class="label">Sort</div>
           <select id="lec-sort" class="select-input" onchange="filterLectures()">
-            <option value="date-desc">Newest</option><option value="date-asc">Oldest</option><option value="title">Title A-Z</option>
+            <option value="date-asc">Oldest</option><option value="date-desc">Newest</option><option value="title">Title A-Z</option>
           </select>
         </div>
       </div>
@@ -2320,7 +2321,7 @@ function renderLectureCatalog(lectures, activeTopics, isAll) {
 function filterLectures() {
   const search = (document.getElementById('lec-search')?.value||'').toLowerCase();
   const status = document.getElementById('lec-status')?.value||'all';
-  const sort = document.getElementById('lec-sort')?.value||'date-desc';
+  const sort = document.getElementById('lec-sort')?.value||'date-asc';
   const isAll = state.activeBlockId === 'all';
   let lectures = isAll ? state.lectures : state.lectures.filter(l => l.blockId === state.activeBlockId);
   if (search) lectures = lectures.filter(l => l.title.toLowerCase().includes(search));
@@ -2361,8 +2362,9 @@ function filterLectures() {
 // ============================================================
 function renderChecklist(lectures) {
   const el = document.getElementById('view-checklist');
-  const pending = lectures.filter(l => !l.ingested).sort((a,b) => new Date(b.date) - new Date(a.date));
-  const done = lectures.filter(l => l.ingested).sort((a,b) => new Date(b.date) - new Date(a.date));
+  // we want to sort ascending because, in all likelihood, we're behind schedule rather than working from the end. This is a checklist, after all.
+  const pending = lectures.filter(l => !l.ingested).sort((a,b) => new Date(a.date) - new Date(b.date));
+  const done = lectures.filter(l => l.ingested).sort((a,b) => new Date(a.date) - new Date(b.date));
   const all = [...pending, ...done];
 
   el.innerHTML = `
