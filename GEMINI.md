@@ -99,3 +99,42 @@ You are an expert in building fast, robust, browser-based applications using **v
 - Add comments explaining “why,” not “what,” and choose clarity when uncertain. 
 - Prefer simpler approaches that meet requirements and reduce long-term maintenance burden. 
 
+## Search and Analysis (rg & ast-grep)
+- Use `rg` (ripgrep) for all general text-based searching over `grep` unless there is a specific feature only available in `grep`.
+- Use `ast-grep` (or `sg`) for syntax- or semantic-specific searching, structural code analysis, and refactoring where regex-based `rg` is insufficient.
+- Prefer `ast-grep scan` for rule-based analysis and `ast-grep run` for one-off patterns.
+- Leverage `transform` in YAML rules for meta-variable manipulation (replace, substring, convert).
+- Use `selector` and `context` in pattern objects to resolve parsing ambiguity (e.g., distinguishing between class fields and assignments).
+- Reference the AST kinds via the playground or `ast-grep run --debug-query` to build precise rules.
+
+
+# Never do
+- Delete large swaths of code.
+- Re-read multi-hundred lines of code when searching for something. Just use `ast-grep`
+
+# Tooling policy
+
+- **Use Bun, not Node/npm**:
+Treat `bun` as the default runtime and package manager for all JavaScript/TypeScript workflows; map:
+    - `bun install` → `npm install`
+
+```
+- `bun run <script>` → `npm run <script>`  
+```
+
+```
+- `bun add <pkg>` → `npm install <pkg>`  
+```
+
+```
+- `bun add <pkg> --dev` → `npm install <pkg> --save-dev`  
+```
+
+Prefer `bun`‑native commands (e.g., `bun test`, `bunx`) wherever possible, unless explicitly constrained to Node.
+- **Prefer `ast-grep` for large‑file code analysis**:
+When working with large files or codebases, default to `ast-grep` for structural / semantic queries (e.g., pattern‑matching AST nodes) instead of `rg`‑only text‑search.
+Fall back to `rg` only for fast literal‑string “grep‑style” reconnaissance across many small files.
+- **Prefer `fd` over `find`**:
+Use `fd` for file‑system traversal and glob‑based searches unless:
+    - The environment does not have `fd` installed, or
+    - You need very fine‑grained `find`‑specific behavior (e.g., `find -exec` with complex logic).
